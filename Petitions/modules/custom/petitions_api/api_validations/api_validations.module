@@ -1,0 +1,124 @@
+<?php
+
+/**
+ * @file
+ * Provides validations for Services according to Whitehouse API Standards.
+ */
+
+/**
+ * The maximum limit allowed for retrieving validations.
+ */
+define('API_VALIDATIONS_MAX_LIMIT_DEFAULT', 1000);
+
+/**
+ * Implements hook_services_resources().
+ */
+function api_validations_services_resources() {
+  $resources = array();
+
+  $resources['validations'] = array(
+    'operations' => array(
+      'index' => array(
+        'help' => t('Provides a list of validated signatures'),
+        'file' => array(
+          'type' => 'inc',
+          'module' => 'api_validations',
+          'name' => 'api_validations',
+        ),
+        'callback' => '_api_validations_resource_index',
+        'args' => array(
+          array(
+            'name' => 'api_key',
+            'optional' => FALSE,
+            'type' => 'string',
+            'description' => t('The API key.'),
+            'source' => array('param' => 'api_key'),
+          ),
+          array(
+            'name' => 'petition_id',
+            'optional' => TRUE,
+            'type' => 'string',
+            'description' => t('Optionally filter by Petition ID.'),
+            'source' => array('param' => 'petition_id'),
+          ),
+          array(
+            'name' => 'mock',
+            'optional' => TRUE,
+            'type' => 'int',
+            'description' => 'When set to 1, this will cause the service to return a mock response.',
+            'default value' => 0,
+            'source' => array('param' => 'mock'),
+          ),
+          array(
+            'name' => 'offset',
+            'optional' => TRUE,
+            'type' => 'int',
+            'description' => t('Offset the returned results by this number. E.g., to return results 10-20, an offset of 10 and limit of 10 would be passed.'),
+            'default value' => 0,
+            'source' => array('param' => 'offset'),
+          ),
+          array(
+            'name' => 'limit',
+            'optional' => TRUE,
+            'type' => 'int',
+            'description' => t('The maximum number of results that may be returned. E.g., to return results 10-20, an offset of 10 and limit of 10 would be passed. Maximum limit is @validations_default_limit.',
+              array('@validations_default_limit' => variable_get('api_validations_index_max_limit', API_VALIDATIONS_MAX_LIMIT_DEFAULT))),
+            'default value' => 1000,
+            'source' => array('param' => 'limit'),
+          ),
+        ),
+        'access callback' => 'services_access_menu',
+        'documentation callback' => '_api_validations_index_doc',
+      ),
+    ),
+  );
+
+  return $resources;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function api_validations_form_petitions_data_form_alter(&$form, &$form_state) {
+  $form['petitions_data_limits']['api_validations_index_max_limit'] = array(
+    '#title' => t('Validations maximum result limit'),
+    '#type' => 'textfield',
+    '#default_value' => variable_get('api_validations_index_max_limit', API_VALIDATIONS_MAX_LIMIT_DEFAULT),
+    '#element_validate' => array('element_validate_number'),
+  );
+}
+
+/**
+ * Documentation callback for index method.
+ */
+function _api_validations_index_doc() {
+  module_load_include('inc', 'api_validations');
+
+  $element = array(
+    '#name' => t('Index'),
+    '#path' => '/validations',
+    '#weight' => 1,
+    '#description' => t('Returns a list of validations matching passed parameters.'),
+    '#request_url' => url(variable_get('petitions_data_petitions_api_url', '') . '/v1/validations.json?api_key=asY1k9uCQY7Hg8MCBaa', array('absolute' => TRUE)),
+    '#response' => _api_validations_mock_response('index'),
+    '#errors' => _api_validations_index_doc_errors(),
+    '#auth' => TRUE,
+  );
+
+  return $element;
+}
+
+/**
+ * Documentation callback for errors related to the index method.
+ */
+function _api_validations_index_doc_errors() {
+  $errors = array(
+    '401' => array(
+      '#question' => t("What happens when I pass an invalid API key with my request?"),
+      '#description' => t("I am building a web application that will submit signatures via the write API and confirm that signatures have been validated via the validations resource. If I pass an invalid API key with my request, will I get a response?"),
+      '#response' => _api_validations_mock_response('index401'),
+    ),
+  );
+
+  return $errors;
+}

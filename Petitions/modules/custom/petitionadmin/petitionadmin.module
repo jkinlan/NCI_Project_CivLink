@@ -1,0 +1,431 @@
+<?php
+/**
+ * @file
+ * Code for the Petition UI feature.
+ *
+ * This module contains mysql only functionality.  It will only work in Phase 4
+ * of the mongo2 mysql transition: reading from mysql and writing
+ * to mysql.  No mongo!
+ */
+
+include_once 'petitionadmin.features.inc';
+
+/**
+ * Implements hook_form_id_alter().
+ */
+function petitionadmin_form_views_form_petitions_moderation_tools_alter(&$form, &$form_state, $form_id) {
+  $form['select']['submit']['#value'] = t('Next');
+}
+
+
+/**
+ * Implements hook_permission().
+ */
+function petitionadmin_permission() {
+  $permissions = array();
+
+  $permissions['petition access signatures'] = array(
+    'title'       => t('View petition signatures'),
+    'description' => t('Have the right to view petition signatures.'),
+  );
+
+  $permissions['petition access administrator'] = array(
+    'title'       => t('Access petition administration'),
+    'description' => t('Have the right to access petition administration.'),
+  );
+
+  return $permissions;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function petitionadmin_menu() {
+  $items = array();
+
+  $items['node/%/signatures'] = array(
+    'type'             => MENU_LOCAL_TASK,
+    'title'            => 'Signatures',
+    'page callback'    => 'petitionadmin_admin_signatures',
+    'page arguments'   => array(1),
+    'access callback'  => '_petitionadmin_access_callback',
+    'access arguments' => array(1),
+    'weight'           => 50,
+  );
+
+  $items['node/%/signatures/export/%'] = array(
+    'type'             => MENU_CALLBACK,
+    'page callback'    => 'petitionadmin_export_signatures',
+    'page arguments'   => array(1, 4, 'download'),
+    'access callback'  => '_petitionadmin_access_callback',
+    'access arguments' => array(1),
+  );
+
+  $items['node/%/signatures/export/%/%'] = array(
+    'type'             => MENU_CALLBACK,
+    'page callback'    => 'petitionadmin_export_signatures',
+    'page arguments'   => array(1, 4, 5),
+    'access callback'  => '_petitionadmin_access_callback',
+    'access arguments' => array(1),
+  );
+
+  $items['admin/petitions/content'] = array(
+    'title' => 'Petitions',
+    'description' => 'Petitions management index',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  return $items;
+}
+
+/**
+ * Export signatures for a petition.
+ *
+ * @param int $node_id
+ *   Petition node ID to export signatures of.
+ *
+ * @param string $export_fields
+ *   base = all signatures CSV data without emails
+ *   email = only email signatures CSV data
+ *
+ * @param string $export_type
+ *   download = Download as a file attachment
+ *   stdout = Output to stdout
+ */
+function petitionadmin_export_signatures($node_id, $export_fields, $export_type = 'stdout') {
+  $users = array();
+
+  // Number of rows to load into memory on one loop, adjust for performance.
+  $loop_size = variable_get('signatures_export_loop_size', 5000);
+  $loop_index = 0;
+
+  if ($export_type == 'download') {
+    $filename = 'petition_' . $node_id . '_signatures_' . date('c') . '.csv';
+    petitionadmin_download_send_headers($filename);
+  }
+
+  do {
+    // Force MySQL.
+    $signatures = SignaturesSelectQueryFactory::create(TRUE);
+    $signatures->setPetitionId($node_id);
+    $signatures->setMaxReturnLimit($loop_size);
+    $signatures->setOffset($loop_index++ * $loop_size);
+    $signatures_data = $signatures->execute()->getResultObjects();
+
+    if ($export_fields == 'email') {
+      $uids = array();
+
+      foreach ($signatures_data as $signature) {
+        $uids[] = $signature->getUid();
+      }
+      // Use db_select to improve performance instead of user_load_multiple.
+      $query = db_select('users', 'u');
+      $query->fields('u', array('uid', 'mail'))
+        ->condition('u.uid', $uids, 'IN');
+      $users = $query->execute()->fetchAllAssoc('uid');
+    }
+
+    $df = fopen("php://output", 'w');
+    foreach ($signatures_data as $signature) {
+      if ($export_fields == 'base') {
+        $fields = array(
+          $signature->getEntityId(),
+          $signature->getFirstName(),
+          $signature->getLastName(),
+          $signature->getCity(),
+          $signature->getState(),
+          $signature->getZip(),
+          $signature->getCreated(),
+        );
+      }
+      elseif ($export_fields == 'email') {
+        $fields = array($users[$signature->getUid()]->mail);
+      }
+      fputcsv($df, $fields);
+    }
+    fclose($df);
+    $signatures_count = count($signatures_data);
+
+    unset($signatures_data);
+    unset($signatures);
+    unset($query);
+    unset($users);
+  } while ($signatures_count == $loop_size);
+
+  if ($export_type == 'download') {
+    // Exit out to prevent any other data from entering download stream.
+    die;
+  }
+}
+
+/**
+ * Generate headers for downloading a file via stream.
+ *
+ * @param string $filename
+ *   Filename to use for attachment download
+ */
+function petitionadmin_download_send_headers($filename) {
+  // Disable caching.
+  $now = gmdate("D, d M Y H:i:s");
+  header("Expires: Tue, 03 Jul 2001 06:00:00 GMT");
+  header("Cache-Control: max-age=0, no-cache, must-revalidate, proxy-revalidate");
+  header("Last-Modified: {$now} GMT");
+
+  // Force download.
+  header("Content-Type: application/force-download");
+  header("Content-Type: application/octet-stream");
+  header("Content-Type: application/download");
+
+  // Disposition / encoding on response body.
+  header("Content-Disposition: attachment;filename={$filename}");
+  header("Content-Transfer-Encoding: binary");
+}
+
+/**
+ * Security access callback for signatures tab and view.
+ *
+ * @param null $node
+ *   Target petition ID.
+ *
+ * @return bool
+ *   TRUE if access is allowed. FALSE otherwise
+ */
+function _petitionadmin_access_callback($node = NULL) {
+  if (empty($node) || is_object($node)) {
+    return FALSE;
+  }
+
+  $node = node_load($node);
+  $is_petition_node = $node->type == 'petition';
+  $is_user_authorized = user_access('petition access signatures');
+
+  // This check represents an abundance of caution to prevent this page from
+  // being accessed in Phase 1, Phase 2, and Phase 3 of the mongo2mysql
+  // transition.
+  $is_mongo_off = !petitions_data_mongo_writes_are_enabled();
+  return $is_petition_node && $is_user_authorized && $is_mongo_off;
+}
+
+/**
+ * Implements hook_views_plugins().
+ */
+function petitionadmin_views_plugins() {
+  $plugins = array(
+    'access' => array(
+      'petition_access' => array(
+        'title'   => t('Petition Admin Index Access'),
+        'help'    => t('this is a custom access plugin'),
+        'handler' => 'PetitionUiViewsAccessPlugin',
+        'path'    => drupal_get_path('module', 'petitionadmin'),
+      ),
+    ),
+  );
+
+  return $plugins;
+}
+
+/**
+ * Petition views access callback.
+ *
+ * @param null $account
+ *   Current user account or null.
+ *
+ * @return bool
+ *   boolean if user should have access.
+ */
+function petitionadmin_views_access_callback($account = NULL) {
+  global $user;
+  $access = FALSE;
+
+  if (is_null($account)) {
+    $account = $user;
+  }
+
+  $is_user_authorized = views_check_perm('petition access administrator', $account);
+
+  // This line has a lot of meaning.  This code will only execute when
+  // in Phase 4 of the mongo2 mysql transition: reading from mysql and writing
+  // to mysql.  No mongo!
+  $is_mongo_off = !petitions_data_mongo_writes_are_enabled();
+  $access = $is_user_authorized  && $is_mongo_off;
+
+  return $access;
+}
+
+/**
+ * Builds a link to the administer a specific petition.
+ *
+ * @param int $nid
+ *   The nid of the petition to administer.
+ *
+ * @return string
+ *   A link to the admin page for that petition.
+ */
+function petitionadmin_get_admin_link($nid) {
+  return l(t('Administer This Petition'), petitionadmin_get_admin_url($nid));
+}
+
+/**
+ * Builds the admin url to a specific petition.
+ *
+ * @param int $nid
+ *   The nid of the petition to administer.
+ *
+ * @return string
+ *   A url to the admin page for that petition.
+ */
+function petitionadmin_get_admin_url($nid) {
+  $url = sprintf('%s/node/%s/edit', variable_get('edit_base_url'), check_plain($nid));
+
+  return $url;
+}
+
+/**
+ * Implementation of hook_action_info().
+ */
+function petitionadmin_action_info() {
+  $action = array(
+    'petitionadmin_remove_signature' => array(
+      'label' => t('Remove Signature'),
+      'type' => 'entity',
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+      'behavior' => array('views_property'),
+      'permissions' => array('access content'),
+      'pass rows' => TRUE,
+    ),
+  );
+  return $action;
+}
+
+/**
+ * Move signature from signature_mail to signature_mail_removed.
+ *
+ * @param object $entity
+ *   Signature_mail entity to remove.
+ * @param array $context
+ *   Context.
+ */
+function petitionadmin_remove_signature(&$entity, $context = array()) {
+  // Move signature into removed table or set removal flag.
+  $result = db_query("INSERT IGNORE INTO {signature_mail_removed} (SELECT *, now() FROM {signature_mail} WHERE id=:id)", array(':id' => $entity->id));
+
+  $fraud_data = entity_load('signature_mail_fraud_data', array($entity->id));
+  $fraud_data = $fraud_data[$entity->id];
+  $metrics = array(
+    'is_free_email',
+    'is_open_email',
+    'is_forwarding_email',
+    'is_trash_email',
+    'is_time_bound_email',
+    'is_shredder_email',
+  );
+
+  // Manually remove signature entity for less overhead.
+  db_query('DELETE FROM {signature_mail} WHERE id = :id', array(':id' => $entity->id));
+  petitionadmin_remove_signature_solr($entity->id, 'signature_mail');
+
+  // Update signature count for petition in batches of $decrement_batch_size.
+  $removed_items = $context['progress']['current'];
+  $total_items = $context['progress']['total'];
+  $decrement_batch_size = 25;
+  $decrement_delta = $removed_items % $decrement_batch_size;
+  $last_item = ($removed_items == $total_items);
+  if ($decrement_delta == 0) {
+    db_query("UPDATE IGNORE {field_data_field_petition_signature_count} SET field_petition_signature_count_value = field_petition_signature_count_value - :delta WHERE entity_id = :entity_id AND entity_type = 'node' AND bundle = 'petition'",
+      array(':delta' => $decrement_batch_size, 'entity_id' => $entity->petition_id)
+    );
+  }
+  else if ($last_item) {
+    db_query("UPDATE IGNORE {field_data_field_petition_signature_count} SET field_petition_signature_count_value = field_petition_signature_count_value - :delta WHERE entity_id = :entity_id AND entity_type = 'node' AND bundle = 'petition'",
+      array(':delta' => $decrement_delta, 'entity_id' => $entity->petition_id)
+    );
+  }
+
+  foreach ($metrics as $metric) {
+    if ($fraud_data->$metric) {
+      petition_increment_metadata($entity->petition_id, $metric, TRUE);
+    }
+  }
+  petition_update_metadata_counts($entity->petition_id);
+
+}
+
+/**
+ * Remove signatures from solr.
+ */
+function petitionadmin_remove_signature_solr($signature_id, $entity_type = 'signature_mail') {
+  $environments = apachesolr_load_all_environments();
+  foreach ($environments as $environment) {
+    apachesolr_remove_entity($environment['env_id'], $entity_type, $signature_id);
+  }
+}
+
+/**
+ * Callback for node/%/signatures page.
+ *
+ * @param int $petition_id
+ *   Petition ID.
+ *
+ * @return string
+ *   HTML of page.
+ */
+function petitionadmin_admin_signatures($petition_id) {
+  drupal_add_css(drupal_get_path('module', 'petitionadmin') . '/petitionadmin.css', array('group' => CSS_DEFAULT, 'type' => 'file'));
+
+  $removed_emails = db_query('SELECT count(*) FROM {signature_mail_removed} WHERE petition_id=:petition_id', array(':petition_id' => $petition_id))->fetchField();
+
+  $html = '<strong>Download All Signatures</strong><br />
+<a href="/node/' . $petition_id . '/signatures/export/base/download">CSV</a> | <a href="/node/' . $petition_id . '/signatures/export/email/download">Email</a><hr>';
+  $html .= views_embed_view('signature_mail_fraud_data', 'duplicate_ip_addr_sig_block', $petition_id) . '<hr>';
+  $html .= views_embed_view('signature_mail_fraud_data', 'subaddr_signature_emails_block', $petition_id) . '<hr>';
+  $html .= "<h2>Manually Removed Emails: " . $removed_emails . "</h2><hr>";
+  $html .= views_embed_view('petitionadmin_signatures', 'block_1', $petition_id);
+  return $html;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function petitionadmin_form_views_exposed_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_state['view']->name == 'petitionadmin_signatures' && $form_state['display']->id == 'block_1') {
+
+    if (isset($form_state['view']->args['0'])) {
+      $arg = $form_state['view']->args['0'];
+    }
+    else {
+      $arg = FALSE;
+    }
+
+    $query = db_select('signature_mail_fraud_data', 'smfd');
+    $query->fields('smfd', array('email_domain'));
+    $query->addExpression('COUNT(1)', 'count');
+    if ($arg) {
+      $query->condition('smfd.petition_id', $arg);
+    }
+    $query->leftJoin('signature_mail_removed', 'smr', 'smr.id = smfd.signature_mail_id');
+    $query->isNull('smr.id');
+    $result = $query->isNotNull('smfd.email_domain')
+      ->groupBy('smfd.email_domain')
+      ->orderBy('smfd.email_domain', 'ASC')
+      ->execute()
+      ->fetchAllAssoc('email_domain');
+
+    $results = array('' => '');
+    if ($result) {
+      foreach ($result as $row) {
+        $results[$row->email_domain] = $row->email_domain . ' (' . $row->count . ')';
+      }
+    }
+
+    $default_value = $form_state['input']['email_domain'];
+    if (!in_array($default_value, array_keys($results), TRUE)) {
+      $default_value = '';
+      $form_state['input']['email_domain'] = '';
+    }
+    $form['email_domain'] = array(
+      '#type' => 'select',
+      '#options' => $results,
+      '#default_value' => $default_value,
+    );
+  }
+}

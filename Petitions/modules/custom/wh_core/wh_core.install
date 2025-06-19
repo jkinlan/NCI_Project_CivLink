@@ -1,0 +1,36 @@
+<?php
+
+/**
+ * @file
+ * Install, uninstall, and update hooks.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function wh_core_schema() {
+  $users_roles_schema['blank_users_roles'] = drupal_get_schema('users_roles');
+
+  $users_roles_schema['blank_users_roles']['name'] = 'blank_users_roles';
+  $users_roles_schema['blank_users_roles']['module'] = 'wh_core';
+  $users_roles_schema['blank_users_roles']['mysql_engine'] = 'BLACKHOLE';
+
+  return $users_roles_schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function wh_core_install() {
+  // Visitors can register without approval.
+  variable_set('user_register', 1);
+  // Users must verify their email when registering.
+  variable_set('user_email_verification', 1);
+}
+
+/**
+ * Implements hook_update_last_removed().
+ */
+function wh_core_update_last_removed() {
+  return 7008;
+}

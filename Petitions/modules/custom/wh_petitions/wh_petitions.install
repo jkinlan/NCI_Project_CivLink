@@ -1,0 +1,335 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall routines for the wh_petitions module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function wh_petitions_install() {
+  _wh_petitions_create_menu();
+  _wh_petitions_set_as_primary_menu();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function wh_petitions_uninstall() {
+   // Remove menu and all its links.
+  menu_delete(menu_load('petitions-menu'));
+
+  // Notify user.
+  $message = t('Petitions Menu has been deleted.');
+  drupal_set_message($message, 'status');
+}
+
+/**
+ * Implement hook_mongodb_indexes().
+ */
+function wh_petitions_mongodb_indexes() {
+  $indexes = array();
+
+  $indexes['petitions']['response_status'] = array(
+    'columns' => array(
+      'response_status' => 1,
+    ),
+    'options' => array(
+      'name' => 'response_status_asc',
+    ),
+  );
+
+  $indexes['petitions']['title'] = array(
+    'columns' => array(
+      'title' => 1,
+    ),
+    'options' => array(
+      'name' => 'title_asc',
+    ),
+  );
+
+  $indexes['petitions']['signature_count'] = array(
+    'columns' => array(
+      'signature_count' => -1,
+    ),
+    'options' => array(
+      'name' => 'signature_count_desc',
+    ),
+  );
+
+  $indexes['petitions']['published'] = array(
+    'columns' => array(
+      'published' => -1,
+    ),
+    'options' => array(
+      'name' => 'published_desc',
+    ),
+  );
+
+  $indexes['petitions']['reached_public'] = array(
+    'columns' => array(
+      'reached_public' => -1,
+    ),
+    'options' => array(
+      'name' => 'reached_public_desc',
+    ),
+  );
+
+  $indexes['petitions']['title_keywords'] = array(
+    'columns' => array(
+      'title_keywords' => 1,
+    ),
+    'options' => array(
+      'name' => 'title_keywords_asc',
+    ),
+  );
+
+  $indexes['petitions']['body_keywords'] = array(
+    'columns' => array(
+      'body_keywords' => 1,
+    ),
+    'options' => array(
+      'name' => 'body_keywords_asc',
+    ),
+  );
+
+  $indexes['petitions']['nice_url'] = array(
+    'columns' => array(
+      'nice_url' => 1,
+    ),
+    'options' => array(
+      'name' => 'nice_url_asc',
+    ),
+  );
+
+  $indexes['petitions']['created'] = array(
+    'columns' => array(
+      'created' => -1,
+    ),
+    'options' => array(
+      'name' => 'created_desc',
+    ),
+  );
+
+  $indexes['petitions']['signature_count'] = array(
+    'columns' => array(
+      'signature_count' => 1,
+    ),
+    'options' => array(
+      'name' => 'signature_count_asc',
+    ),
+  );
+
+  $indexes['petitions']['published'] = array(
+    'columns' => array(
+      'published' => 1,
+    ),
+    'options' => array(
+      'name' => 'published_asc',
+    ),
+  );
+
+  $indexes['petitions']['reached_public'] = array(
+    'columns' => array(
+      'reached_public' => 1,
+    ),
+    'options' => array(
+      'name' => 'reached_public_asc',
+    ),
+  );
+
+  $indexes['petitions']['response_status'] = array(
+    'columns' => array(
+      'response_status' => 1,
+    ),
+    'options' => array(
+      'name' => 'response_status_asc',
+    ),
+  );
+
+  $indexes['petitions']['petition_status'] = array(
+    'columns' => array(
+      'petition_status' => 1,
+    ),
+    'options' => array(
+      'name' => 'petition_status_asc',
+    ),
+  );
+
+  $indexes['petitions']['issues_petition_status_hidden_signature_count_desc'] = array(
+    'columns' => array(
+      'issues' => 1,
+      'petition_status' => 1,
+      'hidden' => 1,
+      'signature_count' => -1,
+    ),
+    'options' => array(
+      'name' => 'issues_petition_status_hidden_signature_count_desc',
+    ),
+  );
+
+  $indexes['petitions']['timestamp'] = array(
+    'columns' => array(
+      'timestamp' => 1,
+    ),
+    'options' => array(
+      'name' => 'timestamp_asc',
+    ),
+  );
+
+  $indexes['petitions']['signature_count_review_threshold_mail_sent_petition_status_asc'] = array(
+    'columns' => array(
+      'signature_count' => 1,
+      'review_threshold_mail_sent' => 1,
+      'petition_status' => 1,
+    ),
+    'options' => array(
+      'name' => 'signature_count_review_threshold_mail_sent_petition_status_asc',
+    ),
+  );
+
+  return $indexes;
+}
+
+/**
+ * Create Petitions Menu.
+ */
+function _wh_petitions_create_menu() {
+	// Create Petitions Menu.
+	if (!menu_load('petitions-menu')) {
+	  $menu = array(
+      'menu_name' => 'petitions-menu',
+      'title' => 'Petitions Menu',
+      'description' => 'Default Main Menu for Petitions install profile.'
+	  );
+	  menu_save($menu);
+	  // Notify user about what we just did.
+	  $message = t("Petitions Main Menu has been created.");
+	  drupal_set_message($message, 'status');
+  }
+  else {
+    // Notify user.
+    $message = t("Petitions Menu already exists.");
+    drupal_set_message($message, 'warning');
+  }
+}
+
+/**
+ * Set Petitions Menu as a primary menu.
+ */
+function _wh_petitions_set_as_primary_menu() {
+  variable_set('menu_main_links_source', 'petitions-menu');
+
+  // Notify user about what we just did.
+  $message = t("Petitions Menu has been set as your site's Primary Menu.");
+  drupal_set_message($message, 'status');
+}
+
+/**
+ * Implements hook_update_last_removed().
+ */
+function wh_petitions_update_last_removed() {
+  return 7105;
+}
+
+/**
+ * Increase module weight.
+ */
+function wh_petitions_update_7106(&$sandbox) {
+  db_update('system')
+    ->fields(array('weight' => 100))
+    ->condition('name', 'wh_petitions', '=')
+    ->execute();
+}
+
+/**
+ * Initialize ready response email settings.
+ */
+function wh_petitions_update_7107(&$sandbox) {
+  variable_set('wh_petitions_admin_ready_response_emails', 'wethepeople@whitehouse.gov');
+  variable_set('wh_petitions_admin_ready_response_subject', 'Petition ready for response');
+  variable_set('wh_petitions_admin_ready_response_text', "The petition titled \"!petition_title\" has passed the number of signatures necessary for a response.
+
+You can review the petition here:
+!petition_edit_link
+
+=================
+
+TITLE:
+!petition_title
+
+BODY:
+!petition_body
+
+=================");
+}
+
+/**
+ * Initialize signature threshold email settings.
+ */
+function wh_petitions_update_7108(&$sandbox) {
+  variable_set('wh_petitions_admin_signature_threshold_crossed_emails', 'wethepeople@whitehouse.gov');
+  variable_set('wh_petitions_email_admin_signature_threshold_crossed_subject', 'Petition passed !signature_threshold_crossed signatures');
+  variable_set('wh_petitions_email_admin_signature_threshold_crossed_text', "The petition titled \"!petition_title\" has passed !signature_threshold_crossed signatures.
+You can review the petition here:<br />
+!petition_edit_link
+=================
+TITLE:
+!petition_title
+BODY:
+!petition_body
+================="
+  );
+
+  $threshold_default_levels = array(
+    '1' => 25000,
+    '2' => 50000,
+    '3' => 75000,
+  );
+
+  foreach ($threshold_default_levels as $key => $value) {
+    variable_set('wh_petitions_admin_signature_threshold_' . $key, $value);
+  }
+
+  // Fix for variable naming, wh_petitions_email_admin_ready_response_text vs
+  // wh_petitions_admin_ready_response_text.
+  variable_set('wh_petitions_email_admin_ready_response_subject', 'Petition ready for response');
+  variable_set('wh_petitions_email_admin_ready_response_text', "The petition titled \"!petition_title\" has passed the number of signatures necessary for a response.
+
+You can review the petition here:
+!petition_edit_link
+
+=================
+
+TITLE:
+!petition_title
+
+BODY:
+!petition_body
+
+=================");
+
+}
+
+/**
+ * PT-1833: Removing obsolete variables.
+ */
+function wh_petitions_update_7109() {
+  variable_del('wh_petitions_homepage_left');
+  variable_del('wh_petitions_homepage_center');
+  variable_del('wh_petitions_homepage_right');
+  variable_del('wh_petitions_homepage_content');
+  variable_del('wh_petitions_top_right_text');
+
+  variable_del('petitions_homepage_petition_hero');
+  variable_del('petitions_homepage_easy_steps');
+  variable_del('petitions_homepage_introductory_video');
+  variable_del('petitions_homepage_aside_flag');
+  variable_del('petitions_homepage_featured_responses_flag');
+  variable_del('petitions_homepage_featured_responses');
+  variable_del('petitions_homepage_recent_petitions_flag');
+  variable_del('petitions_homepage_twitter_flag');
+  variable_del('petitions_homepage_twitter');
+  variable_del('petitions_homepage_more_from_the_whitehouse');
+}

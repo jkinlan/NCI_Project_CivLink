@@ -1,0 +1,13 @@
+name = "White House Core"
+description = "Encapsulates configurations specific to Petitions in the Whitehouse environment"
+core = 7.x
+package = White House Custom
+
+stylesheets[all][] = wh_core.css
+
+dependencies[] = logintoboggan
+dependencies[] = petitions_logintoboggan_settings
+dependencies[] = wh_zipcodelookup
+dependencies[] = wh_user_profile
+dependencies[] = captcha
+dependencies[] = wh_user_ss_data

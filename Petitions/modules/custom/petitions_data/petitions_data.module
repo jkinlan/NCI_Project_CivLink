@@ -1,0 +1,318 @@
+<?php
+
+/**
+ * @file
+ * Data abstraction for use with services to provide a flexible backend.
+ */
+
+// @mongo2mysql
+include_once 'petitions_data.mongo2mysql.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function petitions_data_menu() {
+  $items = array();
+
+  $items['admin/petitions/settings/petitions_data'] = array(
+    'title' => 'Petitions Data Module Settings',
+    'description' => 'Configure settings for the Petitions Data module.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('petitions_data_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_form().
+ *
+ * Administration form.
+ */
+function petitions_data_form($form, &$form_state) {
+  global $base_url;
+  $form['petitions_data_petitions_website_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Petitions Website URL'),
+    '#default_value' => variable_get('petitions_data_petitions_website_url', $base_url),
+    '#description' => t('Enter a website URL used to generate links to petitions site.'),
+    '#required' => FALSE,
+  );
+  $form['petitions_data_petitions_api_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Petitions API URL'),
+    '#default_value' => variable_get('petitions_data_petitions_api_url', $base_url),
+    '#description' => t('Enter an API URL used to generate links to API.'),
+    '#required' => FALSE,
+  );
+  $form['petitions_data_limits'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Resource limits'),
+    '#description' => t('Limit maximum resultset size for resources'),
+  );
+
+  if (module_exists('petitions_signatures_display')) {
+    $form['petitions_data_signatures_display_names'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Display names using Petitions Signatures Display settings'),
+      '#default_value' => variable_get('petitions_data_signatures_display_names', 0),
+      '#description' => t('Format names returned by the Signatures method in the same manner in which they are displayed on account profiles and in Petition signatures as configured by the <a href="@url">Petitions Signatures Display module</a>.', array('@url' => '/admin/config/petitions/signatures')),
+      '#required' => FALSE,
+    );
+    $form['petitions_data_signatures_display_locations'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Display locations using Petitions Signatures Display settings'),
+      '#default_value' => variable_get('petitions_data_signatures_display_locations', 0),
+      '#description' => t('Format locations returned by the Signatures method in the same manner in which they are displayed on account profiles and in Petition signatures as configured by the <a href="@url">Petitions Signatures Display module</a>.', array('@url' => '/admin/config/petitions/signatures')),
+      '#required' => FALSE,
+    );
+  }
+
+  return system_settings_form($form);
+}
+
+/**
+ * Implements hook_flush_caches().
+ */
+function petitions_data_flush_caches() {
+  return array('cache_petitions_petitions');
+}
+
+/**
+ * Clear the cache_petitions_petitions cache.
+ */
+function petitions_data_clear_caches() {
+  cache_clear_all('*', 'cache_petitions_petitions', TRUE);
+}
+
+/**
+ * Clear cache of specified petition_id.
+ *
+ * @param string $petition_id
+ *   A hexidecimal petition ID.
+ */
+function petitions_data_clear_cached_petition($petition_id) {
+  // Assuming a cache clear is more expensive than a get, we check
+  // if it is cached before clearing.
+  if (cache_get("petition:{$petition_id}", 'cache_petitions_petitions')) {
+    cache_clear_all("petition:{$petition_id}", 'cache_petitions_petitions');
+  }
+}
+
+/**
+ * Freshen cache of specified petition_id.
+ *
+ * @param string $petition_id
+ *   A hexidecimal petition ID.
+ */
+function petitions_data_freshen_cached_petition($petition_id) {
+  // Clear the petition from cache.
+  petitions_data_clear_cached_petition($petition_id);
+
+  // Reload the petition into cache.
+  petitions_data_get_petition($petition_id);
+}
+
+/**
+ * Gets the path component from a full URL.
+ *
+ * @param string $full_url
+ *   The full URL, e.g., "https://example.com/petition/some-title/as1d2vy6".
+ *
+ * @return string
+ *   The corresponding path, e.g., "petition/some-title/as1d2vy6".
+ */
+function petitions_data_get_path_from_full_url($full_url) {
+  // The is just the URL path component without the leading forward slash (/).
+  $url_parts = parse_url($full_url);
+  $path = substr($url_parts['path'], 1);
+  return $path;
+}
+
+/**
+ * Gets a petition.
+ *
+ * The petition array is cached indefinitely to prevent return trips to the
+ * database for the same information.
+ *
+ * @todo To prevent stale data, cache entries need to be invalidated by petition
+ *   ID whenever:
+ *     - A petition is modified.
+ *     - A new petition is created.
+ *
+ * @param string $petition_id
+ *   A hexidecimal petition ID.
+ *
+ * @return array
+ *   Returns an array of petition data if a petition is found (or an empty array
+ *   if not) containing the following (key, value) pairs:
+ *   - id: A unique identifier as a hexidecimal string.
+ *   - type: The string "petition".
+ *   - title: The title string.
+ *   - body: The body string.
+ *   - issues: An indexed array of terms from the "Issues" vocabulary that the
+ *     petition is tagged with, where each value is another array with the
+ *     following (key, value) pairs:
+ *     - id: The term id (tid).
+ *     - name: The term name string.
+ *   - signatureThreshold: The number of signatures required to receive an
+ *     official response.
+ *   - url: The absolute path to the petition, e.g. "/petition/petition-title".
+ *   - deadline: The deadline for signing the petition, as a Unix timestamp.
+ *   - status: The string "open", "pending response", "responded", or "closed".
+ *   - response: An array of response data if a response has been associated
+ *     with the petition (or NULL if not) containing the following (key, value)
+ *     pairs:
+ *     - id: The response node ID (nid).
+ *     - url: The absolute path to the response node, e.g.
+ *       "/response/response-title".
+ *     - associationTime: The date the response was associated with the
+ *       petition, in the form of a Unix timestamp.
+ *   - created: The date the petition was created, as a Unix timestamp.
+ *
+ *  The following are *not* included in the returned array because they would
+ *  change too often to be reliable in the cached petition data.
+ *   - signatureCount: The number of signatures the petition has received to
+ *     date.
+ *   - signaturesNeeded: The number of signatures still needed in order to reach
+ *     the threshold.
+ */
+function petitions_data_get_petition($petition_id) {
+  $petition = &drupal_static(__FUNCTION__ . $petition_id);
+  if (empty($petition)) {
+    if ($cache = cache_get("petition:{$petition_id}", 'cache_petitions_petitions')) {
+      $petition = $cache->data;
+    }
+    else {
+      $petition = PetitionsController::load($petition_id);
+
+      // If the petition exists, remove volatile values that are likely to
+      // become stale before the cache expires and lead to unreliable displays.
+      if (!empty($petition)) {
+        unset($petition['signatureCount'], $petition['signaturesNeeded']);
+
+        // Cache the result.
+        cache_set("petition:{$petition_id}", $petition, 'cache_petitions_petitions', CACHE_PERMANENT);
+      }
+    }
+  }
+  return $petition;
+}
+
+/**
+ * Determines whether a given petition ID is valid.
+ *
+ * @param mixed $value
+ *   The value to test.
+ *
+ * @return bool
+ *   Returns TRUE if the given value is a valid petition ID or FALSE if not.
+ */
+function petitions_data_is_valid_petition_id($value) {
+  return is_int($value) || petition_is_legacy_id($value);
+}
+
+/**
+ * Checks to see if a petition is open and not expired.
+ *
+ * @param string $petition_id
+ *   A hexidecimal petition ID.
+ *
+ * @return bool
+ *   Returns TRUE if the petition is open and not expired.
+ */
+function petitions_data_petition_is_open($petition_id) {
+  $petition = petitions_data_get_petition($petition_id);
+
+  // Confirm that the petition exists.
+  if (empty($petition)) {
+    return FALSE;
+  }
+
+  // Confirm that the petition has not been removed.
+  if ($petition['status'] !== 'open') {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * Generates a URL for the Petitions website.
+ *
+ * For external URLs, use url() instead.
+ *
+ * @param string $path
+ *   (optional) The internal path being linked to, such as "node/34". The
+ *   default value is equivalent to passing in '<front>' See url() for more
+ *   details.
+ * @param bool $absolute
+ *   (optional) Whether to return an absolute link (beginning with http:).
+ *   Useful for links that will be displayed outside the site, such as in an API
+ *   response or email. If FALSE, returns a path fragment without the leading
+ *   forward slash (/). Defaults to TRUE.
+ * @param bool $edit
+ *   (optional) If the provided URL should use the edit domain.
+ *
+ * @return string
+ *   A string containing a URL to the given path.
+ */
+function petitions_data_url($path = NULL, $absolute = TRUE, $edit = FALSE) {
+  // Strip leading slashes from internal paths to prevent them becoming external
+  // URLs without protocol. /example.com should not be turned into
+  // //example.com.
+  $path = ltrim($path, '/');
+
+  if ($edit) {
+    $base_url = variable_get('edit_base_url', $GLOBALS['base_url']);
+  }
+  else {
+    $base_url = variable_get('petitions_data_petitions_website_url', $GLOBALS['base_url']);
+  }
+
+  $alias = drupal_get_path_alias($path);
+
+  $base = $absolute ? $base_url . '/' : base_path();
+
+  return $base . $alias;
+}
+
+/**
+ * Implements hook_query_TAG_alter().
+ */
+function petitions_data_query_petitions_data_debug_alter(QueryAlterableInterface $query) {
+  if (!variable_get('petitions_data_debug', FALSE)) {
+    return;
+  }
+
+  petition_log_query('petitions_data', $query);
+}
+
+/**
+ * Sanitizes database output.
+ *
+ * Removes characters that break XML validation and replaces non-English
+ * characters with x's.
+ *
+ * @param string $string
+ *   The raw input string.
+ *
+ * @return string
+ *   The XML-safe output string.
+ */
+function petitions_data_sanitize_output($string) {
+  // Make the string XML-safe by removing unacceptable Unicode characters.
+  // @see http://stackoverflow.com/questions/12229572/php-generated-xml-shows-invalid-char-value-27-message
+  $string = preg_replace('/[^\x{0009}\x{000a}\x{000d}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}]+/u', '', $string);
+
+  // Replace non-English characters with x's.
+  // @see http://stackoverflow.com/questions/3654879/remove-non-english-characters-php
+  $string = preg_replace('/[^\00-\255]+/u', 'x', $string);
+
+  // Remove potential XSS attempts.
+  $string = filter_xss($string);
+
+  return $string;
+}

@@ -1,0 +1,107 @@
+<?php
+/**
+ * @file
+ * Definition of the signature mail entity, and some helper functions.
+ */
+
+/**
+ * Implements hook_signature_info().
+ */
+function signature_mail_signature_info() {
+  $info = array();
+
+  $info['mail'] = array(
+    'module' => "signature_mail",
+    'file' => array('php', "signature_mail", "SignatureMail"),
+    'class' => "SignatureMail",
+  );
+
+  return $info;
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function signature_mail_entity_delete($entity, $type) {
+  if ($type == 'signature_mail') {
+    $petition_id = $entity->petition_id;
+
+    $signature_email = db_select('users', 'u')
+      ->fields('u', array('mail'))
+      ->condition('uid', $entity->uid)
+      ->execute()
+      ->fetchField();
+
+    $disposability = disposable_email_get_email_disposability($signature_email);
+    $disposability->is_free_email ? petition_increment_metadata($petition_id, PetitionItem::PETITION_SIGNATURE_COUNT_FREE_EMAILS, TRUE) : NULL;
+    $disposability->is_open_email ? petition_increment_metadata($petition_id, PetitionItem::PETITION_SIGNATURE_COUNT_OPEN_EMAILS, TRUE) : NULL;
+    $disposability->is_forwarding_email ? petition_increment_metadata($petition_id, PetitionItem::PETITION_SIGNATURE_COUNT_FORWARDED_EMAILS, TRUE) : NULL;
+    $disposability->is_trash_email ? petition_increment_metadata($petition_id, PetitionItem::PETITION_SIGNATURE_COUNT_TRASH_EMAILS, TRUE) : NULL;
+    $disposability->is_time_bound_email ? petition_increment_metadata($petition_id, PetitionItem::PETITION_SIGNATURE_COUNT_TIMEBOUND_EMAILS, TRUE) : NULL;
+    $disposability->is_shredder_email ? petition_increment_metadata($petition_id, PetitionItem::PETITION_SIGNATURE_COUNT_SHRED_EMAILS, TRUE) : NULL;
+    disposable_email_is_subaddressed_email($signature_email) ? petition_increment_metadata($petition_id, PetitionItem::PETITION_SIGNATURE_COUNT_SUBADDRESSED_EMAILS, TRUE) : NULL;
+
+    $email = disposable_email_unsubaddress_email($signature_email);
+    petition_remove_signature_email($petition_id, $email);
+    petition_remove_signature_ip($petition_id, $entity->ip_address);
+    petition_update_total_unique_ips_and_emails($petition_id);
+
+  }
+}
+
+/**
+ * Delete all signatures.
+ */
+function signature_mail_delete_all() {
+  $query = new EntityFieldQuery();
+  $query->entityCondition("entity_type", "signature_mail");
+  $results = $query->execute();
+
+  if (!empty($results)) {
+    foreach ($results['signature_mail'] as $id => $info) {
+      entity_delete("signature_mail", $id);
+    }
+  }
+}
+
+/**
+ * Generates a sample signature.
+ */
+function signature_mail_generate_sample() {
+  $signature = entity_create('signature_mail', array());
+  $signature->legacy_id = "alLlslkfj76dklasljkfas";
+  $signature->petition_id = 1;
+  $signature->legacy_petition_id = "alLlslkfj76dklasljkfas";
+  $signature->uid = 1;
+  $signature->timestamp = time();
+  $signature->ip_address = "0.0.0.0";
+  $signature->user_agent = "Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:26.0) Gecko/20100101 Firefox/26.0";
+  $signature->number = 0;
+  $signature->user_first_name = "Alakzim";
+  $signature->user_last_name = "Baladim";
+  $signature->user_city = "Orlando";
+  $signature->user_state = "Florida";
+  $signature->user_zip = "74455";
+  $signature->user_username = "abaladim";
+  $signature->user_country = "United States of America";
+
+  $signature->save();
+}
+
+/**
+ * Implements hook_entity_info_alter().
+ */
+function signature_mail_entity_info_alter(&$info) {
+
+  $fieldable = variable_get("signature_fieldable", 0);
+
+  if ($fieldable) {
+    $info['signature_mail']['fieldable'] = TRUE;
+    $info['signature_mail']['bundles']['signature']['label'] = "Signature Mail";
+    $info['signature_mail']['bundles']['signature']['admin'] = array(
+      'path' => 'admin/config/content/signature_mail',
+      'access arguments' => array('access administration pages'),
+    );
+  }
+
+}

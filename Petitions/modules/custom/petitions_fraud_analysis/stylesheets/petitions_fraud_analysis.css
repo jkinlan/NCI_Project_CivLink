@@ -1,0 +1,21 @@
+table.fraud-statistics {
+  background: #fff; }
+  table.fraud-statistics thead {
+    border-bottom: 1px solid #999; }
+  table.fraud-statistics th, table.fraud-statistics td {
+    padding: 3px 12px; }
+  table.fraud-statistics th:first-child, table.fraud-statistics td:first-child {
+    padding-left: 6px; }
+  table.fraud-statistics th:last-child, table.fraud-statistics td:last-child {
+    padding-right: 6px; }
+  table.fraud-statistics td:not(:first-child) {
+    text-align: right; }
+  table.fraud-statistics th:not(:first-child) {
+    text-align: center; }
+  table.fraud-statistics tr.odd {
+    background-color: #fff; }
+
+table.fraud-statistics .fraud-flag {
+  color: #F00; }
+
+/*# sourceMappingURL=petitions_fraud_analysis.css.map */

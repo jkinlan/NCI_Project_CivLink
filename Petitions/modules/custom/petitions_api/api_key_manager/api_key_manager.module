@@ -1,0 +1,563 @@
+<?php
+
+/**
+ * @file
+ * This is the main module file for API Key Manager.
+ */
+
+include_once 'api_key_manager.features.inc';
+
+define('API_KEY_MANAGER_SHUNT', 'shunt_api_key_manager');
+
+/**
+ * Implements hook_views_api().
+ */
+function api_key_manager_views_api($module, $api) {
+  if ($module == 'views' && $api == 'views_default') {
+    return array('version' => 2);
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function api_key_manager_menu() {
+  $items = array();
+  $items['user/%user/api-keys'] = array(
+    'title' => 'API Keys',
+    'page callback' => '_api_key_manager_user_page',
+    'page arguments' => array(1),
+    'access callback' => 'api_key_manager_local_task_access',
+    'access arguments' => array(1),
+    'weight' => 10,
+    'type' => MENU_LOCAL_TASK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function api_key_manager_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  // Add action link to 'node/add/key' on 'admin/petitions/api-keys' page.
+  if ($root_path == 'admin/petitions/api-keys') {
+    $item = menu_get_item('node/add/key');
+    $item['title'] = t('Create API key');
+    $item['localized_options']['query'] = drupal_get_destination();
+    if ($item['access']) {
+      $data['actions']['output'][] = array(
+        '#theme' => 'menu_local_action',
+        '#link' => $item,
+      );
+    }
+  }
+}
+
+/**
+ * Gets an API Key.
+ *
+ * The API Key node object is cached indefinitely to prevent return trips to the
+ * database for the same information.
+ *
+ * @param string $api_key
+ *   An API Key.
+ *
+ * @return object
+ *   A fully-populated node object, or an empty object if the node is not found.
+ */
+function api_key_manager_get_key($api_key) {
+  $key = &drupal_static(__FUNCTION__ . $api_key);
+  if (!isset($key)) {
+    if ($cache = cache_get("api_key:{$api_key}", 'cache_petitions_api_keys')) {
+      $key = $cache->data;
+    }
+    else {
+      // Search for a node with the given key value.
+      $query = new EntityFieldQuery();
+      $query->entityCondition('entity_type', 'node')
+        ->entityCondition('bundle', 'key')
+        ->fieldCondition('field_api_key_manager_key', 'value', $api_key, '=')
+        ->fieldCondition('field_api_key_manager_status', 'value', 'approved', '=')
+        // Disable node access checks on the query,
+        // see https://www.drupal.org/node/1597378.
+        ->addTag('DANGEROUS_ACCESS_CHECK_OPT_OUT');
+      $result = $query->execute();
+
+      // If the node exists, return it.
+      if (isset($result['node'])) {
+        $key = node_load(current(array_keys($result['node'])));
+      }
+      // If no such node exists, cache an empty object.
+      else {
+        $key = new stdClass();
+      }
+
+      // Cache the result.
+      cache_set("api_key:{$api_key}", $key, 'cache_petitions_api_keys', CACHE_PERMANENT);
+    }
+  }
+  return $key;
+}
+
+/**
+ * Implements hook_flush_caches().
+ */
+function api_key_manager_flush_caches() {
+  return array('cache_petitions_api_keys');
+}
+
+/**
+ * Clear cache of specified api_key.
+ *
+ * @param string $api_key
+ *   An API Key.
+ */
+function api_key_manager_clear_cached_api_key($api_key) {
+  // Assuming a cache clear is more expensive than a get, we check
+  // if it is cached before clearing.
+  if (cache_get("api_key:{$api_key}", 'cache_petitions_api_keys')) {
+    cache_clear_all("api_key:{$api_key}", 'cache_petitions_api_keys');
+  }
+}
+
+/**
+ * Freshen cache of specified api_key.
+ *
+ * @param string $api_key
+ *   An API Key.
+ * @param object $node
+ *   (optional) A node object to insert into the cache. Defaults to NULL.
+ */
+function api_key_manager_freshen_cached_api_key($api_key, $node = NULL) {
+  // Clear the API Key from cache.
+  api_key_manager_clear_cached_api_key($api_key);
+
+  // If we have a node object, insert into cache.
+  if ($node) {
+    cache_set("api_key:{$api_key}", $node, 'cache_petitions_api_keys', CACHE_PERMANENT);
+  }
+  else {
+    api_key_manager_get_key($api_key);
+  }
+}
+
+/**
+ * Implements hook_shunt().
+ */
+function api_key_manager_shunt() {
+  return array(
+    API_KEY_MANAGER_SHUNT => 'Shunt for creating API keys nodes.',
+  );
+}
+
+/**
+ * Implements hook_shunt_enable().
+ */
+function api_key_manager_shunt_enable($name) {
+  if ($name == API_KEY_MANAGER_SHUNT) {
+    // @todo: Message necessary?
+  }
+}
+
+/**
+ * Implements hook_node_access().
+ *
+ * Sets default permissions for authenticated user and administrator roles.
+ */
+function api_key_manager_node_access($node, $op, $account) {
+  $type = is_string($node) ? $node : $node->type;
+
+  // Check to see if the content type is API Key.
+  if ($type == 'key' && $op == 'view') {
+    // Define roles that can view API Keys.
+    global $user;
+    // If the user has permission to View all API Keys display the node.
+    if (user_access('view all api keys')) {
+      return NODE_ACCESS_ALLOW;
+    }
+    // If the user has permission to View own API Keys and the user is the node
+    // author, display the node.
+    elseif (user_access('view own api keys') && $node->uid == $user->uid) {
+      return NODE_ACCESS_ALLOW;
+    }
+    else {
+      return NODE_ACCESS_DENY;
+    }
+  }
+  return NODE_ACCESS_IGNORE;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function api_key_manager_permission() {
+  return array(
+    'view own api keys' => array(
+      'title' => t('View own API Keys'),
+      'description' => t('Allow users to view their own API Keys'),
+    ),
+    'view all api keys' => array(
+      'title' => t('View all API Keys'),
+      'description' => t('Allow users to view all API Keys'),
+    ),
+    'administer api keys' => array(
+      'title' => t('Administer API Keys'),
+      'description' => t('Allow users to edit Application Key, Status, and Feedback fields'),
+    ),
+  );
+}
+
+/**
+ * Access callback for the API Keys page.
+ */
+function api_key_manager_local_task_access($user) {
+  if (!user_view_access($user)) {
+    return FALSE;
+  }
+
+  return user_access('view all api keys') || user_access('view own api keys');
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function api_key_manager_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'key_node_form' && module_exists('shunt') && shunt_is_enabled(API_KEY_MANAGER_SHUNT)) {
+    global $user;
+    if (!in_array('administrator', $user->roles)) {
+      drupal_access_denied();
+    }
+  }
+
+  switch ($form_id) {
+    case 'key_node_form':
+      // Provides a form description at the top of the form.
+      $form['form_description'] = array(
+        '#markup' => '<p>Submit the form below to request an API key for your application.</p>',
+        '#weight' => -6,
+      );
+
+      $form['title'] = array(
+        '#disabled' => TRUE,
+        '#required' => FALSE,
+      );
+
+      // Hides key and status fields from users without the administer_api_keys
+      // role.
+      if (!user_access('administer api keys')) {
+        $form['field_api_key_manager_key']['#type'] = 'hidden';
+        $form['field_api_key_manager_key']['#disabled'] = TRUE;
+        $form['field_api_key_manager_status']['#type'] = 'hidden';
+        $form['field_api_key_manager_status']['#disabled'] = TRUE;
+        $form['field_api_key_manager_feedback']['#type'] = 'hidden';
+        $form['field_api_key_manager_feedback']['#disabled'] = TRUE;
+        $form['revision_information']['#access'] = FALSE;
+      }
+
+      // Add submit handler for DSM message.
+      $form['#submit'][] = 'api_key_manager_key_node_form_submit';
+      break;
+
+    case 'wh_petitions_admin_petition_email_settings':
+      // Types of api_key_manager emails.
+      $types = array(
+        'approved' => 'Email messaging notifying a user that the API key they requested has been approved.',
+        'rejected' => 'Email messaging notifying a user that his/her API key request has been rejected.',
+        'blocked' => 'Email messaging notifying a user that a previously approved/active API key has been blocked and will not work anymore.',
+      );
+
+      // Token help.
+      $api_key_manager_token_help = t('Available body tokens are: !name, !desc, !url, !org, !phone, !api-key, !status, !feedback', array(
+        '!name' => '[api-key:name]',
+        '!desc' => '[api-key:description]',
+        '!url' => '[api-key:url]',
+        '!org' => '[api-key:organization]',
+        '!phone' => '[api-key:phone]',
+        '!api-key' => '[api-key:key]',
+        '!status' => '[api-key:status]',
+        '!feedback' => '[api-key:feedback]',
+      ));
+
+      foreach ($types as $type => $description) {
+        // Translate strings corresponding to types of api_key_manager emails.
+        switch ($type) {
+          case 'approved':
+            $title = t('Notification: Your API key has been approved.');
+            $description = t('Edit the API key status change e-mail message. %token_help', array(
+              '%token_help' => $api_key_manager_token_help,
+            ));
+            $subject = t('Your Application has been approved.');
+            $body = t('Your Application has been approved. Your new key This is your new key: [api-key:key].');
+            break;
+
+          case 'rejected':
+            $title = t('Notification: Your API key has been rejected.');
+            $description = t('Edit the API key status change e-mail message. %token_help', array(
+              '%token_help' => $api_key_manager_token_help,
+            ));
+            $subject = t('Your Application has been rejected.');
+            $body = t('Your Application has been rejected.');
+            break;
+
+          case 'blocked':
+            $title = t('Notification: Your API key has been blocked.');
+            $description = t('Edit the API key status change e-mail message. %token_help', array(
+              '%token_help' => $api_key_manager_token_help,
+            ));
+            $subject = t('Your Application has been blocked.');
+            $body = t('Your Application has been blocked.');
+            break;
+
+        }
+
+        $form['api_key_manager_' . $type . '_email'] = array(
+          '#type' => 'fieldset',
+          '#title' => $title,
+          '#description' => $description,
+          '#weight' => 1,
+          '#collapsible' => TRUE,
+          '#collapsed' => TRUE,
+        );
+        $form['api_key_manager_' . $type . '_email']['api_key_manager_' . $type . '_email_subject'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Subject'),
+          '#default_value' => variable_get('api_key_manager_' . $type . '_email_subject', $subject),
+          '#maxlength' => 180,
+        );
+        $form['api_key_manager_' . $type . '_email']['api_key_manager_' . $type . '_email_body'] = array(
+          '#type' => 'textarea',
+          '#title' => t('Body'),
+          '#default_value' => variable_get('api_key_manager_' . $type . '_email_body', $body),
+          '#rows' => 5,
+        );
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook_submit().
+ *
+ * Provides a message upon submit notifying the user that they have successfully
+ * submitted their application and will be notified once it has been reviewed.
+ */
+function api_key_manager_key_node_form_submit($form, &$form_state) {
+  drupal_get_messages('status', TRUE);
+  drupal_set_message('Thank you for submitting your request for an API Key. You will be notified via email once your request has been reviewed.');
+}
+
+/**
+ * Implements hook_node_presave().
+ */
+function api_key_manager_node_presave($node) {
+  // Make shunt available to programmatic methods of saving keys.
+  if ($node->type == 'key' && module_exists('shunt') && shunt_is_enabled(API_KEY_MANAGER_SHUNT)) {
+    global $user;
+    if (!in_array('administrator', $user->roles)) {
+      drupal_access_denied();
+    }
+  }
+
+  if ($node->type == 'key') {
+    // Set the title if the node is new.
+    if ($node->is_new) {
+      $node->title = $node->uid . ' - ' . $node->field_api_key_manager_name[$node->language][0]['value'];
+    }
+
+    // Clear old key.
+    if (!empty($node->original)) {
+      $old_key = $node->original->field_api_key_manager_key[LANGUAGE_NONE][0]['value'];
+      api_key_manager_clear_cached_api_key($old_key);
+    }
+
+    // Set nodes straight to cache.
+    $new_key = $node->field_api_key_manager_key[LANGUAGE_NONE][0]['value'];
+    api_key_manager_freshen_cached_api_key($new_key, $node);
+
+    // Send email on key node status change.
+    global $language;
+    $user_mail = user_load($node->uid)->mail;
+    $params = array(
+      'name' => $node->field_api_key_manager_name[LANGUAGE_NONE][0]['value'],
+      'desc' => $node->field_api_key_manager_desc[LANGUAGE_NONE][0]['value'],
+      'url' => $node->field_api_key_manager_url[LANGUAGE_NONE][0]['value'],
+      'org' => $node->field_api_key_manager_org[LANGUAGE_NONE][0]['value'],
+      'phone' => $node->field_api_key_manager_phone[LANGUAGE_NONE][0]['value'],
+      'api_key' => !empty($node->field_api_key_manager_key[LANGUAGE_NONE][0]['value']) ? $node->field_api_key_manager_key[LANGUAGE_NONE][0]['value'] : t('Key has not been set yet'),
+      'status' => $node->field_api_key_manager_status[LANGUAGE_NONE][0]['value'],
+      'feedback' => $node->field_api_key_manager_feedback[LANGUAGE_NONE][0]['value'],
+    );
+    if (!empty($node->original) && $node->original->field_api_key_manager_status[LANGUAGE_NONE][0]['value'] != $node->field_api_key_manager_status[LANGUAGE_NONE][0]['value'] && $node->field_api_key_manager_status[LANGUAGE_NONE][0]['value'] != 'pending') {
+      drupal_mail('api_key_manager', $params['status'], $user_mail, $language, $params);
+    }
+  }
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function api_key_manager_node_insert($node) {
+  if ($node->type == 'key') {
+    if ($node->is_new) {
+      $node->path['pathauto'] = FALSE;
+      $path = array(
+        'source' => 'node/' . $node->nid,
+        'alias' => 'user/key/' . $node->uid . '-' . str_replace(' ', '-', $node->field_api_key_manager_name[$node->language][0]['value']),
+      );
+      path_save($path);
+    }
+  }
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function api_key_manager_node_delete($node) {
+  if ($node->type == 'key') {
+    // Freshen cache of specified api_key.
+    $api_key = $node->field_api_key_manager_key[LANGUAGE_NONE][0]['value'];
+    api_key_manager_freshen_cached_api_key($api_key);
+  }
+}
+
+/**
+ * Implements hook_mail().
+ *
+ * @todo Add token replacements to all fields.
+ */
+function api_key_manager_mail($key, &$message, $params) {
+  $language = $message['language'];
+  switch ($key) {
+    case 'blocked':
+      $message['subject'] = variable_get('api_key_manager_blocked_email_subject', t('Your Application has been blocked'));
+      $body_text = variable_get('api_key_manager_blocked_email_body', t('Your Application has been blocked.'));
+      $message['body'][] = token_replace($body_text, $params, array(
+        'language' => $language,
+        'callback' => 'api_key_manager_email_tokens',
+        'sanitize' => FALSE,
+        'clear' => TRUE,
+      ));
+      break;
+
+    case 'rejected':
+      $message['subject'] = variable_get('api_key_manager_rejected_email_subject', t('Your Application has been rejected'));
+      $body_text = variable_get('api_key_manager_rejected_email_body', t('Your Application has been rejected.'));
+      $message['body'][] = token_replace($body_text, $params, array(
+        'language' => $language,
+        'callback' => 'api_key_manager_email_tokens',
+        'sanitize' => FALSE,
+        'clear' => TRUE,
+      ));
+      break;
+
+    case 'approved':
+      $message['subject'] = variable_get('api_key_manager_approved_email_subject', t('Your Application has been approved'));
+      $body_text = variable_get('api_key_manager_approved_email_body', t('Your Application has been approved. This is your new key [api-key:key]'));
+      // We do not sanitize the token replacement, since the output of this
+      // replacement is intended for an e-mail message, not a web browser.
+      $message['body'][] = token_replace($body_text, $params, array(
+        'language' => $language,
+        'callback' => 'api_key_manager_email_tokens',
+        'sanitize' => FALSE,
+        'clear' => TRUE,
+      ));
+      break;
+
+    default:
+      break;
+  }
+}
+
+/**
+ * Token callback to add unsafe tokens for API Key mails.
+ *
+ * This function is used by the token_replace() call in api_key_manager_mail()
+ * to set up some additional tokens that can be used in email messages generated
+ * by api_key_manager_mail().
+ *
+ * @param array $replacements
+ *   An associative array variable containing mappings from token names to
+ *   values (for use with strtr()).
+ * @param array $data
+ *   An associative array of token replacement values.
+ * @param array $options
+ *   Unused parameter required by the token_replace() function.
+ */
+function api_key_manager_email_tokens(&$replacements, $data, $options) {
+  $replacements['[api-key:name]'] = $data['name'];
+  $replacements['[api-key:description]'] = $data['desc'];
+  $replacements['[api-key:url]'] = $data['url'];
+  $replacements['[api-key:organization]'] = $data['org'];
+  $replacements['[api-key:phone]'] = $data['phone'];
+  $replacements['[api-key:key]'] = $data['api_key'];
+  $replacements['[api-key:status]'] = $data['status'];
+  $replacements['[api-key:feedback]'] = $data['feedback'];
+}
+
+/**
+ * Callback to display current API keys in users pages.
+ *
+ * @param object $user
+ *   The $user object.
+ *
+ * @return array
+ *   Renderable array for the display table.
+ */
+function _api_key_manager_user_page($user) {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+  ->entityCondition('bundle', 'key')
+  ->propertyCondition('uid', $user->uid)
+  ->propertyCondition('status', 1);
+  $result = $query->execute();
+
+  if (empty($result['node'])) {
+    $message = t('No keys have been created yet. !url.', array('!url' => l(t('Request an API Key'), 'node/add/key')));
+    return $message;
+  }
+
+  $display_rows = array();
+  $nodes = entity_load('node', array_keys($result['node']));
+  foreach ($nodes as $node) {
+    $display_rows[] = array(
+      $node->field_api_key_manager_name[LANGUAGE_NONE][0]['value'],
+      $node->field_api_key_manager_url[LANGUAGE_NONE][0]['value'],
+      !empty($node->field_api_key_manager_key[LANGUAGE_NONE][0]['value']) ? $node->field_api_key_manager_key[LANGUAGE_NONE][0]['value'] : t('No key has been created yet'),
+      $node->field_api_key_manager_status[LANGUAGE_NONE][0]['value'],
+    );
+  }
+
+  // Sanitize output.
+  foreach ($display_rows as $row => $row_values) {
+    foreach ($row_values as $field => $field_value) {
+      $display_rows[$row][$field] = check_plain($field_value);
+    }
+  }
+
+  $table = array(
+    '#theme' => 'table',
+    '#header' => array(
+      t('Application Name'),
+      t('Application URL'),
+      t('API Key'),
+      t('Status'),
+    ),
+    '#rows' => $display_rows,
+  );
+
+  return $table;
+}
+
+/**
+ * Validates an API Key.
+ *
+ * @param string $api_key
+ *   An presumably API Key string.
+ *
+ * @return bool
+ *   TRUE|FALSE for a valid|invalid key.
+ */
+function api_key_manager_valid_key($api_key) {
+  $key_node = api_key_manager_get_key($api_key);
+  return isset($key_node->type) && $key_node->type == 'key';
+}

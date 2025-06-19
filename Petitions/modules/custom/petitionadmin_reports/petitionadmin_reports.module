@@ -1,0 +1,70 @@
+<?php
+/**
+ * @file
+ * Code for the Petition UI - Reports feature.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function petitionadmin_reports_menu() {
+  $items = array();
+
+  $items['admin/petitions/reports'] = array(
+    'title' => 'Reports',
+    'page callback' => 'petitionadmin_reports_report_summary',
+    'access arguments' => array('petition access reports'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
+    'file' => 'petitionadmin_reports.report.summary.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function petitionadmin_reports_permission() {
+  $permissions = array();
+
+  $permissions['petition access reports'] = array(
+    'title'       => t('Access petition reports'),
+    'description' => t('Have the right to access petition reports.'),
+  );
+
+  return $permissions;
+}
+
+
+/**
+ * Implements hook_cron_queue_info().
+ */
+function petitionadmin_reports_cron_queue_info() {
+  $queues['petitionadmin_reports_summary'] = array(
+    'worker callback' => 'petitionadmin_reporting_summary_processor',
+  );
+
+  return $queues;
+}
+
+/**
+ * Implements hook_cron().
+ */
+function petitionadmin_reports_cron() {
+  $current_datetime = time();
+
+  // Petition UI Reports Summary Cron.
+  $last_execution = variable_get('petitionadmin_reports_summary_lastrun', 0);
+
+  // Number of seconds in an hour.
+  $hour_interval = 3600;
+  $run_window = $last_execution + $hour_interval;
+
+  if ($current_datetime >= $run_window) {
+    module_load_include('inc', 'petitionadmin_reports', 'petitionadmin_reports.report.summary');
+
+    $petition_queue_summary = DrupalQueue::get('petitionadmin_reports_summary');
+    $petition_queue_summary->createItem(array());
+  }
+}

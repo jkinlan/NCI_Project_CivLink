@@ -1,0 +1,240 @@
+<?php
+
+/**
+ * @file
+ * This is the main module file for Petitions Signatures Display.
+ */
+
+/**
+ * Display signatures using signatory's first name, last initial.
+ */
+define('PETITIONS_SIGNATURES_DISPLAY_MODE_FIRST_NAME_LAST_INITIAL', 1);
+
+/**
+ * Display signatures using signatory's first and last initials only.
+ */
+define('PETITIONS_SIGNATURES_DISPLAY_MODE_INITIALS_ONLY', 2);
+
+/**
+ * Implements hook_menu().
+ */
+function petitions_signatures_display_menu() {
+  $items = array();
+
+  $items['admin/petitions/settings/signatures_display'] = array(
+    'title' => 'Signatures Display',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('petitions_signatures_display_configure'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'petitions_signatures_display.admin.inc',
+    'description' => "Configure signatures display.",
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Returns a signatory's name formatted for public display on petitions.
+ *
+ * @param string $first_name
+ *   A signatory's first name.
+ * @param string $last_name
+ *   A signatory's last name.
+ *
+ * @return string
+ *   A name formatted for public display as a signatory.
+ */
+function petitions_signatures_display_style($first_name, $last_name) {
+  $normalized_first_name = ucfirst(trim($first_name));
+  $first_initial = drupal_substr($normalized_first_name, 0, 1);
+  $normalized_last_name = ucfirst(trim($last_name));
+  $last_initial = drupal_substr($normalized_last_name, 0, 1);
+
+  $display_mode = variable_get('petitions_signatures_display_mode', PETITIONS_SIGNATURES_DISPLAY_MODE_FIRST_NAME_LAST_INITIAL);
+  switch ($display_mode) {
+    case PETITIONS_SIGNATURES_DISPLAY_MODE_INITIALS_ONLY:
+      // Initials only.
+      return "{$first_initial}. {$last_initial}.";
+
+    case PETITIONS_SIGNATURES_DISPLAY_MODE_FIRST_NAME_LAST_INITIAL:
+    default:
+      // First name, last initial.
+      return "{$normalized_first_name} {$last_initial}.";
+  }
+}
+
+/**
+ * Returns an array including city, state, and abbreviated country.
+ *
+ * Invokes _perform_lookup() in wh_zipcodelookup.module.
+ */
+function petitions_signatures_display_location($zipcode = '') {
+  if (module_exists('wh_zipcodelookup') && function_exists('wh_zipcodelookup_get_location_details_from_zipcode')) {
+    $location = wh_zipcodelookup_get_location_details_from_zipcode($zipcode);
+    return $location;
+  }
+  else {
+    return;
+  }
+}
+
+/**
+ * Returns city and state formatted for display.
+ *
+ * Invokes _perform_lookup() in wh_zipcodelookup.module.
+ */
+function petitions_signatures_display_location_formatted($zipcode, $city, $state, $format = '') {
+  $location = array();
+  $display = variable_get('petitions_signatures_display_signature_location', 'petitions_signatures_display_signature_db_city_state');
+  if ($display == 'petitions_signatures_display_signature_db_city_state') {
+    $location = petitions_signatures_display_location($zipcode);
+  }
+  else {
+    $location[0] = array(
+      'city' => $city,
+      'state' => $state,
+    );
+  }
+  $location[0]['zipcode'] = $zipcode;
+
+  switch ($format) {
+    case 'api':
+      return $location[0];
+
+    default:
+      $city = (!empty($location[0]['city'])) ? $location[0]['city'] : '';
+      $state = (!empty($location[0]['state'])) ? $location[0]['state'] : '';
+      if ($city && $state) {
+        $formatted_location = $city . ', ' . $state;
+      }
+      elseif ($city && !$state) {
+        $formatted_location = $city;
+      }
+      elseif (!$city && $state) {
+        $formatted_location = $state;
+      }
+      else {
+        $formatted_location = '';
+      }
+      return $formatted_location;
+  }
+}
+
+/**
+ * Default location fields display.
+ */
+function petitions_signatures_display_city_state(&$form) {
+  // Attach wh_zipcodelookup.js.
+  if (module_exists('wh_zipcodelookup')) {
+    $form['#attached']['js'][] = drupal_get_path('module', 'wh_zipcodelookup') . '/wh_zipcodelookup.js';
+  }
+  return $form;
+}
+
+/**
+ * Display disabled location fields.
+ */
+function petitions_signatures_display_city_state_disabled(&$form) {
+  // Disable city and state fields.
+  $form['profile_main']['field_city']['#disabled'] = TRUE;
+  $form['profile_main']['field_state']['#disabled'] = TRUE;
+  // Attach wh_zipcodelookup.js.
+  if (module_exists('wh_zipcodelookup')) {
+    $form['#attached']['js'][] = drupal_get_path('module', 'wh_zipcodelookup') . '/wh_zipcodelookup.js';
+  }
+  // Add form validation.
+  $form['#validate'][] = 'petitions_signatures_display_location_validate';
+  return $form;
+}
+
+/**
+ * Hide location fields from display.
+ */
+function petitions_signatures_display_city_state_hidden(&$form) {
+  // Hide city and state fields.
+  $form['profile_main']['field_city']['#type'] = 'hidden';
+  $form['profile_main']['field_state']['#type'] = 'hidden';
+  // Add form validation.
+  $form['#validate'][] = 'petitions_signatures_display_location_validate';
+  return $form;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function petitions_signatures_display_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'user_register_form' || $form_id == 'user_profile_form') {
+    $function = variable_get('petitions_signatures_display_account_location', 'petitions_signatures_display_city_state');
+    $form += $function($form);
+  }
+}
+
+/**
+ * Form validation callback.
+ */
+function petitions_signatures_display_location_validate($form, &$form_state) {
+  $zipcode = isset($form_state['values']['profile_main']['field_zip'][LANGUAGE_NONE][0]['value']) ? $form_state['values']['profile_main']['field_zip'][LANGUAGE_NONE][0]['value'] : FALSE;
+
+  // Since location lookup is based on zip, don't proceed without it.
+  if ($zipcode) {
+    $location = petitions_signatures_display_location($zipcode);
+    $city = isset($location[0]['city']) ? $location[0]['city'] : '';
+    $state = isset($location[0]['state']) ? $location[0]['state'] : '';
+    if (isset($location[0]['country']) && $location[0]['country'] == 'us') {
+      $country = 'United States';
+    }
+    else {
+      $country = $form_state['values']['profile_main']['field_country'][LANGUAGE_NONE][0]['value'];
+    }
+
+    $values = array(
+      'field_city' => $city,
+      'field_state' => $state,
+      'field_country' => $country,
+    );
+
+    foreach ($values as $key => $value) {
+      form_set_value($form['profile_main'][$key], array(LANGUAGE_NONE => array(0 => array('value' => $value))), $form_state);
+    }
+  }
+}
+
+/**
+ * Alter the display of user profile location fields.
+ */
+function petitions_signatures_display_profile2_view_alter(&$build, $type) {
+  $display = variable_get('petitions_signatures_display_profile_location', 'petitions_signatures_display_profile_user_city_state');
+  if ($display == 'petitions_signatures_display_profile_db_city_state') {
+    if (isset($build['field_zip']['#items'][0]['value'])) {
+      $zipcode = $build['field_zip']['#items'][0]['value'];
+      $location = petitions_signatures_display_location($zipcode);
+      $city = $location[0]['city'];
+      $state = $location[0]['state'];
+      if ($location[0]['country'] == 'us') {
+        $country = 'United States';
+      }
+      else {
+        $country = $build['field_country']['#items'][0]['value'];
+      }
+
+      if ($city) {
+        $build['field_city'][0]['#markup'] = $city;
+      }
+      else {
+        unset($build['field_city']);
+      }
+
+      if ($state) {
+        $build['field_state'][0]['#markup'] = $state;
+      }
+      else {
+        unset($build['field_state']);
+      }
+
+      if ($build['field_country']['#items'][0]['value']) {
+        $build['field_country'][0]['#markup'] = $country;
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+name = Validations Resource
+description = Provides responsess resource for Services according to Whitehouse API Standards
+core = 7.x
+package = Petitions API
+dependencies[] = petitions_api
+dependencies[] = api_errors
+dependencies[] = api_services_responses
+
+; Tests
+files[] = tests/ApiValidationsTestCase.test
+

@@ -1,0 +1,18 @@
+<?php
+/**
+ * @file
+ * Contains install and update functions for the Petitions API Shunt.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function shunt_api_install() {
+  // Set the module weight very high to prevent other invocations of
+  // hook_services_resources_alter() from interfering with shunt_api appending
+  // a value to enabled resources' args array.
+  db_update('system')
+    ->fields(array('weight' => 1000))
+    ->condition('name', 'shunt_api', '=')
+    ->execute();
+}

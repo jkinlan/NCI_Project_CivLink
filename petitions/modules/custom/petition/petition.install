@@ -1,0 +1,730 @@
+<?php
+
+/**
+ * @file
+ * Install file for the petition module.
+ */
+
+/**
+ * Implements hook_enable().
+ */
+function petition_enable() {
+  $t = get_t();
+  drupal_set_message($message = $t('The Petition  module was successfully enabled.'), $type = 'status');
+  variable_set('pathauto_node_petition_pattern', 'petition/[node:title]');
+}
+
+/**
+ * Implements hook_disable().
+ */
+function petition_disable() {
+  $t = get_t();
+  drupal_set_message($message = $t('The Petition  module has been disabled.'), $type = 'status');
+}
+
+/**
+ * Implements hook_install().
+ */
+function petition_install() {
+  require_once 'includes/petition.field.inc';
+  // Close comments.
+  variable_set('comment_petition', COMMENT_NODE_CLOSED);
+
+  // Build the fields and add their instances to the petition content type.
+  petition_build_fields(petition_fields());
+  $t = get_t();
+  drupal_set_message($message = $t('The Petition module has been installed and a Petition content type has been created.'), $type = 'status');
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function petition_uninstall() {
+  // Delete all petition nodes.
+  require_once 'includes/petition.inc';
+  petition_delete_all();
+  // Remove variables.
+  variable_del('comment_petition');
+  $t = get_t();
+  drupal_set_message($message = $t('The Petition module has been uninstalled and petition nodes deleted.'), $type = 'status');
+  // Remove petition content type.
+  node_type_delete('petition');
+  drupal_set_message($message = $t('The Petition content type hase been deleted.'), $type = 'status');
+  drupal_flush_all_caches();
+}
+
+/**
+ * Implements hook_schema().
+ */
+function petition_schema() {
+  $schema = array(
+    'petition_signature_emails' => array(
+      'description' => 'Stores unique email counts per petition.',
+      'fields' => array(
+        'petition_id' => array(
+          'description' => 'The petition.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'email' => array(
+          'description' => 'The email address of the signature.',
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+        ),
+        'count' => array(
+          'description' => 'The number of times the petition has been signed with the email address.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 1,
+        ),
+      ),
+      'indexes' => array(
+        'petition_id' => array('petition_id'),
+      ),
+      'unique keys' => array(
+        'email_petition' => array('email', 'petition_id'),
+      ),
+    ),
+    'petition_signature_ips' => array(
+      'description' => 'Stores unique IP address counts per petition.',
+      'fields' => array(
+        'petition_id' => array(
+          'description' => 'The petition.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'ip' => array(
+          'description' => 'The IP address of the signature.',
+          'type' => 'varchar',
+          'length' => 45,
+          'not null' => TRUE,
+          'default' => '',
+        ),
+        'count' => array(
+          'description' => 'The number of times the petition has been signed from the IP address.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 1,
+        ),
+      ),
+      'indexes' => array(
+        'petition_id' => array('petition_id'),
+      ),
+      'unique keys' => array(
+        'ip_petition' => array('ip', 'petition_id'),
+      ),
+    ),
+    'petition_metadata' => array(
+      'description' => 'Metadata about petitions.',
+      'fields' => array(
+        'petition_id' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ),
+        'metric' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+        ),
+        'value' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 1,
+        ),
+      ),
+      'indexes' => array(
+        'petition_id' => array('petition_id'),
+      ),
+      'unique keys' => array(
+        'petition_metric' => array('petition_id', 'metric'),
+      ),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Implements hook_update_last_removed().
+ */
+function petition_update_last_removed() {
+  return 7000;
+}
+
+/**
+ * Revert petition_pages feature.
+ */
+function petition_update_7303(&$sandbox) {
+  _petition_pt_1613();
+}
+
+/**
+ * PT-1613: Revert petition_pages feature.
+ */
+function _petition_pt_1613() {
+  features_revert(array('petition_pages' => array('views_view')));
+}
+
+/**
+ * Updates fields from fields array if it changed.
+ */
+function petition_update_7300(&$sandbox) {
+  require_once 'includes/petition.field.inc';
+  // Update the fields and add their instances to the petition content type.
+  petition_build_fields(petition_fields());
+}
+/**
+ * Updates fields from fields array if it changed.
+ */
+function petition_update_7301(&$sandbox) {
+  require_once 'includes/petition.field.inc';
+  // Update the fields and add their instances to the petition content type.
+  petition_build_fields(petition_fields());
+}
+
+/**
+ * Set pathauto pattern for petitions.
+ *
+ * Update fields from fields array if it changed.
+ */
+function petition_update_7302(&$sandbox) {
+  variable_set('pathauto_node_petition_pattern', 'petition/[node:title]');
+
+  require_once 'includes/petition.field.inc';
+  // Update the fields and add their instances to the petition content type.
+  petition_build_fields(petition_fields());
+}
+
+/**
+ * Updates fields from fields array if it changed.
+ */
+function petition_update_7305(&$sandbox) {
+  require_once 'includes/petition.field.inc';
+  // Update the fields and add their instances to the petition content type.
+  petition_build_fields(petition_fields());
+}
+
+/**
+ * Add index to field_data_field_legacy_id.field_legacy_id_value
+ *
+ * Update fields from fields array if changed.
+ */
+function petition_update_7306(&$sandbox) {
+  require_once 'includes/petition.field.inc';
+  // Update the fields and add their instances to the petition content type.
+  petition_build_fields(petition_fields());
+}
+
+/**
+ * Add signature/validation count fields to petition nodes.
+ */
+function petition_update_7307(&$sandbox) {
+  require_once 'includes/petition.field.inc';
+
+  // field_legacy_id has 2 indexes in db, yet field_config is reporting only 1.
+  $existing_fields = petition_fields();
+  petition_fix_field_config($existing_fields['node-petition-field_legacy_id']['field_config']);
+
+  // Update the fields and add their instances to the petition content type.
+  petition_build_fields(petition_fields());
+}
+
+/**
+ * Creates fields and adds field instances to petition content type.
+ *
+ * The structure of the array coming in matches the fields array created by
+ * the Features module.
+ *
+ * @param array $fields
+ *   A fields array as created by Features.
+ */
+function petition_build_fields($fields = array()) {
+  if (!empty($fields)) {
+    // Clear out an fields info in case this is being called by an update.
+    field_info_cache_clear();
+
+    // Load all the existing fields and instances up-front so that we don't
+    // have to rebuild the cache all the time.
+    $existing_fields = field_info_fields();
+    $existing_instances = field_info_instances();
+
+    // Loop through and process each field and field instance.
+    foreach ($fields as $field) {
+      // Create or update field.
+      $field_config = $field['field_config'];
+      if (isset($existing_fields[$field_config['field_name']])) {
+        $existing_field = $existing_fields[$field_config['field_name']];
+        if ($field_config + $existing_field != $existing_field) {
+          field_update_field($field_config);
+        }
+      }
+      else {
+        field_create_field($field_config);
+        $existing_fields[$field_config['field_name']] = $field_config;
+      }
+
+      // Create or update field instance.
+      $field_instance = $field['field_instance'];
+      if (isset($existing_instances[$field_instance['entity_type']][$field_instance['bundle']][$field_instance['field_name']])) {
+        $existing_instance = $existing_instances[$field_instance['entity_type']][$field_instance['bundle']][$field_instance['field_name']];
+        if ($field_instance + $existing_instance != $existing_instance) {
+          // This field instance exists, so update it.
+          field_update_instance($field_instance);
+        }
+      }
+      else {
+        // This field instance does not exist, so create it.
+        field_create_instance($field_instance);
+        $existing_instances[$field_instance['entity_type']][$field_instance['bundle']][$field_instance['field_name']] = $field_instance;
+      }
+    }
+    variable_set('menu_rebuild_needed', TRUE);
+  }
+
+}
+
+/**
+ * Fix field config to match schema without trying to update table itself.
+ *
+ * @see field_update_field
+ */
+function petition_fix_field_config($field) {
+  // Check that the specified field exists.
+  $prior_field = field_read_field($field['field_name']);
+  if (empty($prior_field)) {
+    throw new FieldException('Attempt to update a non-existent field.');
+  }
+
+  // Use the prior field values for anything not specifically set by the new
+  // field to be sure that all values are set.
+  $field += $prior_field;
+  $field['settings'] += $prior_field['settings'];
+
+  // Some updates are always disallowed.
+  if ($field['type'] != $prior_field['type']) {
+    throw new FieldException("Cannot change an existing field's type.");
+  }
+  if ($field['entity_types'] != $prior_field['entity_types']) {
+    throw new FieldException("Cannot change an existing field's entity_types property.");
+  }
+  if ($field['storage']['type'] != $prior_field['storage']['type']) {
+    throw new FieldException("Cannot change an existing field's storage type.");
+  }
+
+  // Collect the new storage information, since what is in
+  // $prior_field may no longer be right.
+  module_load_install($field['module']);
+  $schema = (array) module_invoke($field['module'], 'field_schema', $field);
+  $schema += array('columns' => array(), 'indexes' => array(), 'foreign keys' => array());
+  // 'columns' are hardcoded in the field type.
+  $field['columns'] = $schema['columns'];
+  // 'foreign keys' are hardcoded in the field type.
+  $field['foreign keys'] = $schema['foreign keys'];
+  // 'indexes' can be both hardcoded in the field type, and specified in the
+  // incoming $field definition.
+  $field += array(
+    'indexes' => array(),
+  );
+  $field['indexes'] += $schema['indexes'];
+
+  $has_data = field_has_data($field);
+
+  // See if any module forbids the update by throwing an exception.
+  foreach (module_implements('field_update_forbid') as $module) {
+    $function = $module . '_field_update_forbid';
+    $function($field, $prior_field, $has_data);
+  }
+
+  // Save the new field definition. @todo: refactor with
+  // field_create_field.
+
+  // The serialized 'data' column contains everything from $field that does not
+  // have its own column and is not automatically populated when the field is
+  // read.
+  $data = $field;
+  unset($data['columns'], $data['field_name'], $data['type'], $data['locked'], $data['module'], $data['cardinality'], $data['active'], $data['deleted']);
+  // Additionally, do not save the 'bundles' property populated by
+  // field_info_field().
+  unset($data['bundles']);
+
+  $field['data'] = $data;
+
+  // Store the field and create the id.
+  $primary_key = array('id');
+  drupal_write_record('field_config', $field, $primary_key);
+
+  // Clear caches.
+  field_cache_clear(TRUE);
+
+  // Invoke external hooks after the cache is cleared for API consistency.
+  module_invoke_all('field_update_field', $field, $prior_field, $has_data);
+}
+
+/**
+ * PT-1721: Adding tables to store metrics.
+ */
+function petition_update_7308(&$sandbox) {
+  // Explicitly defining schema, see https://www.drupal.org/node/150220.
+  $petition_signature_emails = array(
+    'description' => 'Stores unique email counts per petition.',
+    'fields' => array(
+      'petition_id' => array(
+        'description' => 'The petition.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'email' => array(
+        'description' => 'The email address of the signature.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'count' => array(
+        'description' => 'The number of times the petition has been signed with the email address.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+    ),
+    'indexes' => array(
+      'petition_id' => array('petition_id'),
+    ),
+    'unique keys' => array(
+      'email_petition' => array('email', 'petition_id'),
+    ),
+  );
+  $petition_signature_ips = array(
+    'description' => 'Stores unique IP address counts per petition.',
+    'fields' => array(
+      'petition_id' => array(
+        'description' => 'The petition.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'ip' => array(
+        'description' => 'The IP address of the signature.',
+        'type' => 'varchar',
+        'length' => 16,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'count' => array(
+        'description' => 'The number of times the petition has been signed from the IP address.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+    ),
+    'indexes' => array(
+      'petition_id' => array('petition_id'),
+    ),
+    'unique keys' => array(
+      'ip_petition' => array('ip', 'petition_id'),
+    ),
+  );
+
+  db_create_table('petition_signature_emails', $petition_signature_emails);
+  db_create_table('petition_signature_ips', $petition_signature_ips);
+}
+
+/**
+ * PT-1719: Initialize threshold variables, add new field to petitions.
+ */
+function petition_update_7309(&$sandbox) {
+  variable_set('petitions_alert_enabled', FALSE);
+
+  // Threshold ratios, upper bound: triggered by x > bound.
+  variable_set('petitions_alert_threshold_upper_sig_email_signups', '0.60');
+  variable_set('petitions_alert_threshold_upper_sig_free_emails', '1.00');
+  variable_set('petitions_alert_threshold_upper_sig_fwd_emails', '0.10');
+  variable_set('petitions_alert_threshold_upper_sig_open_emails', '1.00');
+  variable_set('petitions_alert_threshold_upper_sig_shred_emails', '0.10');
+  variable_set('petitions_alert_threshold_upper_sig_subadr_emails', '0.10');
+  variable_set('petitions_alert_threshold_upper_sig_tmebnd_emails', '0.10');
+  variable_set('petitions_alert_threshold_upper_sig_trash_emails', '0.10');
+  variable_set('petitions_alert_threshold_upper_sig_unq_email_act', '1.00');
+  variable_set('petitions_alert_threshold_upper_val_unq_ip_emails', '1.00');
+
+  // Threshold ratios, lower bound: triggered by x < bound.
+  variable_set('petitions_alert_threshold_lower_sig_email_signups', '0.05');
+  variable_set('petitions_alert_threshold_lower_sig_free_emails', '0.25');
+  variable_set('petitions_alert_threshold_lower_sig_fwd_emails', '0');
+  variable_set('petitions_alert_threshold_lower_sig_open_emails', '0.25');
+  variable_set('petitions_alert_threshold_lower_sig_shred_emails', '0');
+  variable_set('petitions_alert_threshold_lower_sig_subadr_emails', '0');
+  variable_set('petitions_alert_threshold_lower_sig_tmebnd_emails', '0');
+  variable_set('petitions_alert_threshold_lower_sig_trash_emails', '0');
+  variable_set('petitions_alert_threshold_lower_sig_unq_email_act', '0.50');
+  variable_set('petitions_alert_threshold_lower_val_unq_ip_emails', '0.95');
+
+
+  // Alert email.
+  variable_set('petitions_alert_email_address', 'wethepeople@whitehouse.gov');
+  variable_set('petitions_alert_email_subject', '[Petition Fraud Alert] Threshold Reached: !title.');
+  variable_set('petitions_alert_email_body', "The following ratios for petition !title have surpassed the set threshold:\n !metrics \n\n See analysis at !url");
+  variable_set('petitions_alert_email_throttle', '43200');
+  variable_set('petitions_alert_signature_threshold', '250');
+
+  // Install 'Last Fraud Alert' timestamp field.
+  // Update the fields and add their instances to the petition content type.
+  require_once 'includes/petition.field.inc';
+  petition_build_fields(petition_fields());
+}
+
+/**
+ * PT-1721: increase petition_signature_ips ip column to be varchar(45).
+ */
+function petition_update_7310(&$sandbox) {
+  db_drop_unique_key('petition_signature_ips', 'ip_petition');
+  db_change_field(
+    'petition_signature_ips',
+    'ip',
+    'ip',
+    array(
+      'description' => 'The IP address of the signature.',
+      'type' => 'varchar',
+      'length' => 45,
+      'not null' => TRUE,
+      'default' => '',
+    ),
+    array('unique keys' => array('ip_petition' => array('ip', 'petition_id')))
+  );
+}
+
+/**
+ * PT-1745: enable jquery update and set to 1.7.
+ */
+function petition_update_7311(&$sandbox) {
+  module_enable(array('jquery_update'));
+  // Set jquery version to 1.7.
+  variable_set('jquery_update_jquery_version', '1.7');
+}
+
+/**
+ * PT-1746: enable petitions_api_keys module.
+ */
+function petition_update_7312(&$sandbox) {
+  module_enable(array('petitions_api_keys_endpoint'));
+  features_revert(array('petitions_api_keys_endpoint'));
+}
+
+/**
+ * PT-1701 - Revert petitionsadmin and enable signature_mail_fraud_data module.
+ */
+function petition_update_7313(&$sandbox) {
+  module_enable(array('signature_mail_fraud_data'));
+  features_revert(array('petitionadmin'));
+}
+
+/**
+ * PT-1815: Adding tables to store metrics, add threshold fields.
+ */
+function petition_update_7314(&$sandbox) {
+  // Explicitly defining schema, see https://www.drupal.org/node/150220.
+  $petition_metadata = array(
+    'description' => 'Metadata about petitions.',
+    'fields' => array(
+      'petition_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'metric' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'value' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+    ),
+    'indexes' => array(
+      'petition_id' => array('petition_id'),
+      'metric' => array('metric'),
+      'petition_id_metric' => array('petition_id', 'metric'),
+    ),
+    'unique keys' => array(
+      'petition_metric' => array('petition_id', 'metric'),
+    ),
+  );
+
+  db_create_table('petition_metadata', $petition_metadata);
+
+  // Install signature threshold crossed timestamp fields.
+  require_once 'includes/petition.field.inc';
+  petition_build_fields(petition_fields());
+}
+
+/**
+ * PT-1868: Initialize event_log cleanup variable.
+ */
+function petition_update_7315(&$sandbox) {
+  variable_set('petitions_event_lifetime', '3 days');
+}
+
+/**
+ * PT-1830 - Create petition_type taxonomy and field_petition_type.
+ */
+function petition_update_7316() {
+  $new_vocab = (object) array(
+    'name' => 'Type',
+    'description' => 'Petition Type',
+    'machine_name' => 'petition_type',
+  );
+  taxonomy_vocabulary_save($new_vocab);
+}
+
+/**
+ * PT-1880: Add petition type terms.
+ */
+function petition_update_7317() {
+  $vocab = taxonomy_vocabulary_machine_name_load('petition_type');
+  $terms = array(
+    0 => 'Take or explain a position on an issue or policy',
+    1 => 'Tell us what the federal government is doing about an issue',
+    2 => 'Change an existing Administration policy',
+    3 => 'Propose a new Administration policy',
+    4 => 'Call on Congress to act on an issue',
+  );
+
+  $petition_types_list = array_map('strtolower', taxonomy_get_tree($vocab->vid));
+
+  foreach ($terms as $weight => $term_name) {
+    if (!in_array(strtolower($term_name), $petition_types_list)) {
+      taxonomy_term_save((object) array(
+        'name' => $term_name,
+        'vid' => $vocab->vid,
+        'weight' => $weight,
+      ));
+    }
+  }
+}
+
+/**
+ * PT-1857: Update petition fields and display settings, add more link to view.
+ */
+function petition_update_7318() {
+  // Enable 'teaser' and 'full' view modes.
+  $petition_bundle_config = variable_get('field_bundle_settings_node__petition', FALSE);
+  if ($petition_bundle_config) {
+    $petition_bundle_config['view_modes']['teaser']['custom_settings'] = TRUE;
+    $petition_bundle_config['view_modes']['full']['custom_settings'] = TRUE;
+    variable_set('field_bundle_settings_node__petition', $petition_bundle_config);
+  }
+}
+
+/**
+ * PT-1862 - Revert Page feature.
+ */
+function petition_update_7319() {
+  // Required forced removal of menu links due to system module.
+  $links = menu_load_links('petitions-menu');
+  foreach ($links as $link) {
+    $link['has_children'] = FALSE;
+    $link['plid'] = 0;
+    _menu_delete_item($link, TRUE);
+  }
+  $links = menu_load_links('main-menu');
+  foreach ($links as $link) {
+    $link['has_children'] = FALSE;
+    $link['plid'] = 0;
+    _menu_delete_item($link, TRUE);
+  }
+}
+
+/**
+ * PT-1909 - Revert wtp_contexts, petition_pages feature, add homepage.
+ */
+function petition_update_7320() {
+  $node_data = array(
+    'type' => 'wh_petitions_page',
+    'uid' => 1,
+    'status' => 1,
+    'comment' => 0,
+    'promote' => 0,
+    'path' => array('alias' => 'petitions', 'pathauto' => FALSE),
+  );
+
+  $entity = entity_create('node', $node_data);
+  $wrapper = entity_metadata_wrapper('node', $entity);
+
+  $body = <<<EOD
+<p>
+<a href="/petition/create" class="button" role="button">Create a Petition</a>
+</p>
+EOD;
+  $title = "Petition the White House on the Issues that Matter to You";
+
+  $wrapper->title->set($title);
+  $wrapper->body->set(array('value' => $body, 'format' => 'full_html'));
+  $wrapper->save();
+
+  // Set front page to use petitions node ID.
+  variable_set('site_frontpage', 'node/' . $wrapper->getIdentifier());
+}
+
+/**
+ * PT-1946 - Revert wtp_contexts, petition_pages, add response page.
+ */
+function petition_update_7321() {
+  $node_data = array(
+    'type' => 'wh_petitions_page',
+    'uid' => 1,
+    'status' => 1,
+    'comment' => 0,
+    'promote' => 0,
+    'path' => array('alias' => 'responses', 'pathauto' => FALSE),
+  );
+
+  $entity = entity_create('node', $node_data);
+  $wrapper = entity_metadata_wrapper('node', $entity);
+
+  $body = <<<EOD
+<p>
+<a href="/petition/create" class="button" role="button">Create a Petition</a>
+</p>
+EOD;
+  $title = "Petition the White House on the Issues that Matter to You";
+
+  $wrapper->title->set($title);
+  $wrapper->body->set(array('value' => $body, 'format' => 'full_html'));
+  $wrapper->save();
+}
+
+/**
+ * PT-1962 - Sets the more link on how petitions work to go to the about page.
+ */
+function petition_update_7322(&$sandbox) {
+  variable_set('how_petitions_work_additional_more_link_url', 'about#step-by-step');
+}
+
+/**
+ * PT-1957 - Revert wtp_contexts.
+ */
+function petition_update_7323(&$sandbox) {
+  variable_set('petitionssignatureform_no_signatures_message', 'This petition has been archived because it did not meet the signature requirements. It can no longer be signed.');
+  variable_set('petitionssignatureform_no_signatures_title', 'Closed Petition');
+  variable_set('petitionssignatureform_no_signatures_tos_message', 'This petition has been archived because it violated the terms of service for this site. It can no longer be signed.');
+  variable_set('petitionssignatureform_no_signatures_tos_title', 'Closed Petition');
+}

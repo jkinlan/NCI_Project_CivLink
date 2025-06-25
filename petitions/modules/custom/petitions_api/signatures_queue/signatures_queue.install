@@ -1,0 +1,597 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Signatures Queue module.
+ */
+
+require_once "signatures_queue.module";
+
+/**
+ * Implements hook_install().
+ */
+function signatures_queue_install() {
+  $t = get_t();
+
+  // Set database to signatures_archive so that we create tables there.
+  signatures_queue_set_db('signatures_archive');
+
+  $schema = _signatures_queue_archive_schema_tables();
+  foreach ($schema as $name => $table) {
+    db_create_table($name, $table);
+  }
+
+  // Set back to default and get the previously active db.
+  $previous = db_set_active();
+  if ($previous != 'signatures_archive') {
+    drupal_set_message($t('The signature archive tables were created in the default database, this is not recommended for production installations. See INSTALL.md for more information.'), 'warning');
+  }
+
+  // Set some default permissions.
+  $perms = array('validate petition signatures');
+  user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, $perms);
+  user_role_grant_permissions(DRUPAL_AUTHENTICATED_RID, $perms);
+
+}
+
+/**
+ * Define schema for validation tables.
+ */
+function _signatures_queue_get_validations_schema() {
+  // Schema for validations tables.
+  $schema = array(
+    'description' => 'Signature validations.',
+    'fields' => array(
+      'vid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The validation ID.',
+      ),
+      'secret_validation_key' => array(
+        'description' => 'The unique, hashed secret validation key.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'client_ip' => array(
+        'description' => "The client's IP address",
+        'type' => 'varchar',
+        'length' => 40,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'petition_id' => array(
+        'description' => 'The petition ID.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'timestamp_validation_close' => array(
+        'description' => 'The time the validation is no longer valid.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'timestamp_received_signature_validation' => array(
+        'description' => 'The time the signature passed through the "receive signature validation" workflow.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'timestamp_preprocessed_signature' => array(
+        'description' => 'The time the signature passed through the "preprocess signatures" workflow.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'timestamp_preprocessed_validation' => array(
+        'description' => 'The time the validation passed through the "preprocess signatures" workflow.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'timestamp_processed_signature' => array(
+        'description' => 'The time the signature passed through the "process signatures" workflow.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+    ),
+    'indexes' => array(
+      'validation_key' => array('secret_validation_key'),
+      'petition_signed' => array('petition_id'),
+      'timestamp_validation_close' => array('timestamp_validation_close'),
+    ),
+    'unique keys' => array(
+      'secret_validation_key' => array('secret_validation_key'),
+    ),
+    'primary key' => array('vid'),
+  );
+  return $schema;
+}
+
+/**
+ * Define schema for signature tables.
+ */
+function _signatures_queue_get_signatures_schema() {
+  // Schema for signatures table.
+  $schema = array(
+    'description' => 'Validated signatures.',
+    'fields' => array(
+      'sid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The signature ID.',
+      ),
+      'secret_validation_key' => array(
+        'description' => 'The unique, hashed secret validation key.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'signature_source_api_key' => array(
+        'description' => 'The source API key.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'petition_id' => array(
+        'description' => 'The petition ID.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'first_name' => array(
+        'description' => "The signatory's first name.",
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'last_name' => array(
+        'description' => "The signatory's last name.",
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'zip' => array(
+        'description' => "The signatory's ZIP code.",
+        'type' => 'varchar',
+        'length' => 16,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'email' => array(
+        'description' => "The signatory's email address.",
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'signup' => array(
+        'description' => 'A boolean flag indicating whether or not the signatory opted in receive emails.',
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => 0,
+      ),
+      'timestamp_petition_close' => array(
+        'description' => 'The time the petition closes/expires.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'timestamp_validation_close' => array(
+        'description' => 'The time the validation is no longer valid.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'timestamp_received_new_signature' => array(
+        'description' => 'The time the signature passed through the "receive new signatures" workflow.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'timestamp_initiated_signature_validation' => array(
+        'description' => 'The time the signature passed through the "initiate signature validation" workflow.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'timestamp_preprocessed_signature' => array(
+        'description' => 'The time the signature passed through the "preprocess signatures" workflow.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'timestamp_preprocessed_validation' => array(
+        'description' => 'The time the validation passed through the "preprocess signatures" workflow.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+      'timestamp_processed_signature' => array(
+        'description' => 'The time the signature passed through the "process signatures" workflow.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+    ),
+    'indexes' => array(
+      'signatures_pending_validation_key' => array('secret_validation_key'),
+      'signatures_pending_petition_id' => array('petition_id'),
+      'timestamp_validation_close' => array('timestamp_validation_close'),
+    ),
+    'unique keys' => array(
+      'secret_validation_key' => array('secret_validation_key'),
+    ),
+    'primary key' => array('sid'),
+  );
+  return $schema;
+}
+
+
+/**
+ * Signature processing schema for creation on any database.
+ *
+ * Typically tables are created using hook_schema() but we allow these tables to
+ * be added to a secondary database.
+ *
+ * @see signatures_queue_install()
+ */
+function _signatures_queue_schema_tables() {
+  $schema = array();
+
+  // Validation schema tables.
+  $schema['validations'] = _signatures_queue_get_validations_schema();
+  $schema['validations']['description'] = 'Signature validations, received when a user validates his/her signature by email.';
+
+  $schema['validations_processed'] = _signatures_queue_get_validations_schema();
+  $schema['validations_processed']['description'] = 'Processed validations are validation records matched to corresponding pending signatures and counted.';
+
+  // Signature schema tables.
+  $schema['signatures_pending_validation'] = _signatures_queue_get_signatures_schema();
+  $schema['signatures_pending_validation']['description'] = 'Pending signatures awaiting validation.';
+
+  $schema['signatures_processed'] = _signatures_queue_get_signatures_schema();
+  $schema['signatures_processed']['description'] = 'Processed signatures are pending signature records matched to corresponding validation records and counted.';
+
+  return $schema;
+}
+
+/**
+ * Signature archive schema for creation on any database.
+ *
+ * Typically tables are created using hook_schema() but we allow these tables to
+ * be added to a secondary (or tertiary) database.
+ *
+ * @see _signatures_queue_schema_tables()
+ * @see signatures_queue_install()
+ */
+function _signatures_queue_archive_schema_tables() {
+  $schema = array();
+
+  // Validation schema tables.
+  $schema['validations_orphaned_archive'] = _signatures_queue_get_validations_schema();
+  $schema['validations_orphaned_archive']['description'] = 'Legitimate validations have corresponding pending signatures. Orphaned validations are records with no corresponding signature.';
+
+  $schema['validations_processed_archive'] = _signatures_queue_get_validations_schema();
+  $schema['validations_processed_archive']['description'] = 'Processed and archived validations.';
+
+  // Signature schema tables.
+  $schema['signatures_not_validated_archive'] = _signatures_queue_get_signatures_schema();
+  $schema['signatures_not_validated_archive']['description'] = 'Pending signatures that are not validated in time are archived here.';
+
+  $schema['signatures_processed_archive'] = _signatures_queue_get_signatures_schema();
+  $schema['signatures_processed_archive']['description'] = 'Archived valid signatures.';
+
+  foreach ($schema as $table => $definition) {
+    unset($schema[$table]['unique keys']['secret_validation_key']);
+    $schema[$table]['indexes']['secret_validation_key'] = array('secret_validation_key');
+    if (empty($schema[$table]['unique keys'])) {
+      unset($schema[$table]['unique keys']);
+    }
+  }
+
+  return $schema;
+}
+
+/**
+ * Instantiate schema for validation queue tables.
+ *
+ * @return array
+ *   The validation schema for both signatures_pending_validation_queue and
+ *   pending_validations_queue.
+ */
+function _signatures_queue_validation_queue_tables() {
+  $schema = array();
+  $schema['signatures_pending_validation_queue'] = _signatures_queue_get_signatures_schema();
+  $schema['signatures_pending_validation_queue']['description'] = 'Pending signatures awaiting validation.';
+  $schema['signatures_pending_validation_queue']['fields']['name'] = array(
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => '',
+    'description' => 'The name of the queue that created this record.',
+  );
+  $schema['signatures_pending_validation_queue']['fields']['expire'] = array(
+    'type' => 'int',
+    'not null' => TRUE,
+    'default' => 0,
+    'description' => 'Timestamp when the claim lease expires on the item.',
+  );
+  $schema['signatures_pending_validation_queue']['fields']['processed'] = array(
+    'type' => 'int',
+    'size' => 'tiny',
+    'not null' => TRUE,
+    'default' => 0,
+    'description' => 'Boolean flag indicating if this signature has been processed.',
+  );
+  $schema['signatures_pending_validation_queue']['fields']['created'] = array(
+    'type' => 'int',
+    'not null' => TRUE,
+    'default' => 0,
+    'description' => 'Timestamp when the item was created.',
+  );
+  $schema['signatures_pending_validation_queue']['indexes']['processed'] = array('processed');
+  $schema['signatures_pending_validation_queue']['indexes'] += array(
+    'timestamp_received_new_signature' => array('timestamp_received_new_signature'),
+  );
+  $schema['pending_validations_queue'] = _signatures_queue_get_validations_schema();
+  $schema['pending_validations_queue']['description'] = 'Signature validations, received when a user validates his/her signature by email.';
+
+  return $schema;
+}
+
+/**
+ * Implements hook_schema().
+ *
+ * @see _signatures_queue_schema_tables()
+ */
+function signatures_queue_schema() {
+
+  // Add the tables used by SignatureValidationProcessorQueue class.
+  $schema = _signatures_queue_validation_queue_tables();
+
+  // The "signature_validations" table is the data source for the API
+  // "validations" endpoint, which is the reason it's the only Signatures Queue
+  // table that resides in the Drupal database.
+  $schema['signature_validations'] = array(
+    'description' => 'Signature validations for the API "validations" endpoint.',
+    'fields' => array(
+      'vid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'The validation ID.',
+      ),
+      'secret_validation_key' => array(
+        'description' => 'The unique, hashed secret validation key.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'signature_id' => array(
+        'description' => 'The signature ID.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'signature_source_api_key' => array(
+        'description' => 'The source API key.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'email' => array(
+        'description' => "The signatory's email address.",
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'petition_id' => array(
+        'description' => 'The petition ID.',
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'timestamp_processed_signature' => array(
+        'description' => 'The time the signature passed through the "process signatures" workflow.',
+        'type' => 'int',
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('vid'),
+    'indexes' => array(
+      'source_key' => array('signature_source_api_key'),
+    ),
+    'mysql_engine' => 'InnoDB',
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function signatures_queue_uninstall() {
+  // Set database so that we drop the tables there.
+  signatures_queue_set_db();
+
+  // Remove the tables defined in _signatures_queue_schema_tables().
+  $schema = _signatures_queue_schema_tables();
+  foreach (array_keys($schema) as $name) {
+    db_drop_table($name);
+  }
+
+  // Set database to the archive db so that we drop the tables there.
+  signatures_queue_set_db('signatures_archive');
+
+  // Remove the tables defined in _signatures_queue_archive_schema_tables().
+  $schema = _signatures_queue_archive_schema_tables();
+  foreach (array_keys($schema) as $name) {
+    db_drop_table($name);
+  }
+
+  db_set_active();
+
+  // Delete all Signatures Queue persistent variables.
+  db_delete('variable')
+    ->condition('name', db_like('signatures_queue') . '%', 'LIKE')
+    ->execute();
+  cache_clear_all('variables', 'cache_bootstrap');
+}
+
+/**
+ * Implements hook_update_last_removed().
+ */
+function signatures_queue_update_last_removed() {
+  return 7001;
+}
+
+/**
+ * Prepare Signatures Queue for Petitions 7.x-3.*.
+ */
+function signatures_queue_update_7300() {
+  // Remove obsolete signatures_queue_log.
+  signatures_queue_set_db();
+  db_drop_table('signatures_queue_log');
+  db_set_active();
+  variable_del('signatures_queue_log_events');
+
+  signatures_queue_set_db();
+  $is_archive_table = FALSE;
+
+  // Update signature tables.
+  $signature_tables = array(
+    'signatures_not_validated_archive',
+    'signatures_pending_validation',
+    'signatures_processed',
+    'signatures_processed_archive',
+  );
+  $signatures_schema = _signatures_queue_get_signatures_schema();
+  foreach ($signature_tables as $table) {
+    // Rename signature timestamp database fields.
+    $renamed_signature_fields = array(
+      'timestamp_submitted' => 'timestamp_received_new_signature',
+      'timestamp_validation_email_sent' => 'timestamp_initiated_signature_validation',
+      'timestamp_processed' => 'timestamp_processed_signature',
+    );
+    $is_archive_table = strpos($table, '_archive');
+    if ($is_archive_table) {
+      signatures_queue_set_db('signatures_archive');
+    }
+    foreach ($renamed_signature_fields as $old_name => $new_name) {
+      if (db_table_exists($table) && db_field_exists($table, $old_name)) {
+        db_change_field($table, $old_name, $new_name, $signatures_schema['fields'][$new_name]);
+      }
+    }
+    // Add new signature timestamp database fields.
+    $new_signature_fields = array(
+      'timestamp_preprocessed_signature',
+      'timestamp_preprocessed_validation',
+    );
+    foreach ($new_signature_fields as $name) {
+      if (db_table_exists($table) && !db_field_exists($table, $name)) {
+        db_add_field($table, $name, $signatures_schema['fields'][$name]);
+      }
+    }
+    if ($is_archive_table) {
+      signatures_queue_set_db();
+      $is_archive_table = FALSE;
+    }
+  }
+
+  // Update validation tables.
+  $validation_tables = array(
+    'validations',
+    'validations_processed',
+    'validations_orphaned_archive',
+    'validations_processed_archive',
+  );
+  $validations_schema = _signatures_queue_get_validations_schema();
+  foreach ($validation_tables as $table) {
+    $is_archive_table = strpos($table, '_archive');
+    if ($is_archive_table) {
+      signatures_queue_set_db('signatures_archive');
+    }
+    // Rename validation timestamp database fields.
+    $renamed_validation_fields = array(
+      'timestamp_validated' => 'timestamp_received_signature_validation',
+      'timestamp_processed' => 'timestamp_processed_signature',
+    );
+    foreach ($renamed_validation_fields as $old_name => $new_name) {
+      if (db_table_exists($table) && db_field_exists($table, $old_name)) {
+        db_change_field($table, $old_name, $new_name, $validations_schema['fields'][$new_name]);
+      }
+    }
+    // Add new validation timestamp database fields.
+    $new_validation_fields = array(
+      'timestamp_preprocessed_signature',
+      'timestamp_preprocessed_validation',
+    );
+    foreach ($new_validation_fields as $name) {
+      if (db_table_exists($table) && !db_field_exists($table, $name)) {
+        db_add_field($table, $name, $validations_schema['fields'][$name]);
+      }
+    }
+    if ($is_archive_table) {
+      signatures_queue_set_db();
+      $is_archive_table = FALSE;
+    }
+  }
+
+  db_set_active();
+
+  // Update signature_validations table.
+  $table = 'signature_validations';
+  $old_name = 'timestamp_processed';
+  $new_name = 'timestamp_processed_signature';
+  $signatures_queue_schema = signatures_queue_schema();
+  if (db_table_exists($table) && db_field_exists($table, $old_name)) {
+    db_change_field($table, $old_name, $new_name, $signatures_queue_schema['signature_validations']['fields'][$new_name]);
+  }
+}
+
+/**
+ * Set default for new permission.
+ */
+function signatures_queue_update_7301() {
+  $perms = array('validate petition signatures');
+  user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, $perms);
+  user_role_grant_permissions(DRUPAL_AUTHENTICATED_RID, $perms);
+}
+
+/**
+ * PT-1821: Create tables for SignatureValidationProcessorQueue in default db.
+ */
+function signatures_queue_update_7302() {
+  $schema = _signatures_queue_validation_queue_tables();
+
+  foreach ($schema as $name => $table) {
+    db_create_table($name, $table);
+  }
+}
+
+/**
+ * PT-1899: Remove unique indexes from the signature workflow archive tables
+ */
+function signatures_queue_update_7303() {
+  signatures_queue_set_db('signatures_archive');
+
+  $schema = _signatures_queue_archive_schema_tables();
+  $tables = array_keys($schema);
+  foreach ($tables as $table) {
+    db_drop_unique_key($table, 'secret_validation_key');
+    db_add_index($table, 'secret_validation_key', array('secret_validation_key'));
+  }
+
+  db_set_active();
+}
+
+/**
+ * PT-1944: Add index to the signatures_pending_validation_queue table.
+ */
+function signatures_queue_update_7304() {
+  db_add_index('signatures_pending_validation_queue', 'timestamp_received_new_signature', array('timestamp_received_new_signature'));
+}

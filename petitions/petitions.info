@@ -1,0 +1,66 @@
+name = Petitions
+description = Install Petitions (built by the White House to power petitions.whitehouse.gov)
+
+core = 7.x
+distribution_name = Petitions
+exclusive = 1
+version = VERSION
+
+; core
+dependencies[] = block
+dependencies[] = comment
+dependencies[] = contextual
+dependencies[] = image
+dependencies[] = list
+dependencies[] = menu
+dependencies[] = number
+dependencies[] = options
+dependencies[] = path
+dependencies[] = taxonomy
+dependencies[] = syslog
+dependencies[] = search
+dependencies[] = toolbar
+dependencies[] = field_ui
+dependencies[] = file
+dependencies[] = rdf
+
+; contrib
+dependencies[] = captcha
+dependencies[] = context
+dependencies[] = date
+dependencies[] = entity
+dependencies[] = entitycache
+dependencies[] = entityreference
+dependencies[] = features
+dependencies[] = globalredirect
+dependencies[] = imce
+dependencies[] = libraries
+dependencies[] = pathauto
+dependencies[] = petitions_api
+dependencies[] = petitionssignatureform
+dependencies[] = rest_server
+dependencies[] = services
+dependencies[] = services_documentation
+dependencies[] = shunt
+dependencies[] = textcaptcha
+dependencies[] = wysiwyg
+dependencies[] = logger
+
+; custom
+dependencies[] = api_key_manager
+dependencies[] = api_petitions
+dependencies[] = api_signatures
+dependencies[] = api_validations
+dependencies[] = petition
+dependencies[] = petition_pages
+dependencies[] = petitions_api
+dependencies[] = petitions_maintenance
+dependencies[] = petitions_profanity
+dependencies[] = petitions_signatures_display
+dependencies[] = signature_mail
+dependencies[] = signatures_queue
+dependencies[] = petitionadmin
+dependencies[] = petitionadmin_reports
+
+; files
+files[] =  petitions.profile

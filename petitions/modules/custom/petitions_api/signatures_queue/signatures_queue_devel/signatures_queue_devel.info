@@ -1,0 +1,8 @@
+name = Signatures Queue Devel
+description = Generate Dummy content in Signature Queues.
+core = 7.x
+package = Development
+dependencies[] = signatures_queue
+configure = admin/config/system/petitions/signatures-queue
+files[] = classes/SignaturesQueueDevel.inc
+files[] = classes/SignaturesQueueDevelTimer.php

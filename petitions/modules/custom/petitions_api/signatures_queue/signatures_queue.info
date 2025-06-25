@@ -1,0 +1,13 @@
+name = Signatures Queue
+description = Provides a queue-based backend for processing petition signatures submitted via the API.
+core = 7.x
+package = Petitions
+dependencies[] = api_petitions
+dependencies[] = wh_petitions
+dependencies[] = petition
+dependencies[] = entity
+dependencies[] = signature_mail_fraud_data
+dependencies[] = disposable_email
+configure = admin/petitions/settings/signatures-queue
+files[] = classes/SignaturesQueue.inc
+files[] = classes/SignatureValidationProcessorQueue.php

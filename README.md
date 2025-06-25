@@ -1,5 +1,4 @@
-# NCI_Project_CivLink
-# Welcome to CivLink
+# NCI_Project_CivLink - CivLink
 
 CivLink is a project to help the public engage with local and national government 
 in Ireland, by reporting common street problems such as potholes and broken street 

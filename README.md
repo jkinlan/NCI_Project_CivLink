@@ -14,7 +14,7 @@ already been reported and leave updates. Users can also subscribe to email or
 RSS alerts of problems in their area.
 
 ###
-CivLink is a Fork of [FixMyStreet](https://github.com/mysociety/fixmystreet), 
+CivLink contains a submodule of [FixMyStreet](https://github.com/mysociety/fixmystreet), 
 an open source project to help people run websites for reporting common street 
 problems such as potholes and broken street lights to the appropriate authority.
 

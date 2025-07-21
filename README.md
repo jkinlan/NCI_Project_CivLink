@@ -50,3 +50,16 @@ Install required packages for FixMyStreet
 ```
 sudo bin/install_packages
 ```
+Create PostgreSQL database and user
+```
+sudo -u postgres psql <<EOF
+CREATE USER fms WITH PASSWORD 'somepassword';
+CREATE DATABASE fms WITH OWNER fms;
+\c fms
+CREATE LANGUAGE plpgsql;
+EOF
+```
+Install Perl modules & setup
+```
+script/setup
+```

@@ -29,5 +29,24 @@ CivLink uses a copy of [petitions](https://github.com/WhiteHouse/petitions),
 a GNU General Public License project that lets users create and sign petitions.
 
 ## Installation
-
-...
+Update hosts
+```
+sudo apt update && sudo apt install -y git
+```
+Install Git
+```
+apt install -y git
+apt install -y curl
+```
+Clone Repo
+```
+git clone --recursive https://github.com/jkinlan/NCI_Project_CivLink.git
+```
+Change directory to fixmyscreet
+```
+cd NCI_Project_CivLink/fixmystreet
+```
+Install required packages for FixMyStreet
+```
+sudo bin/install_packages
+```

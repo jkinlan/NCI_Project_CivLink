@@ -35,11 +35,16 @@ Update hosts
 sudo apt update && sudo apt install -y git
 ```
 <br></br>
-Install Git, Curl, and Cpanm
+
+Install Dependencies (https://www.youtube.com/watch?v=g8qLiRWT6CQ)
 ```
-apt install -y git
-apt install -y curl
-apt install -y cpanminus
+sudo apt-get install -y tasksel
+sudo tasksel install -y lamp-server  # You may be asked to set mysql root pass: mysqlPassword
+sudo apt-get install -y postgresql postgresql-contrib # Required postgres database server.
+sudo apt-get install -y postgresql-client-common postgresql-client  # Required postgres database client.
+sudo apt-get install -y libapache2-mod-auth-pgsql  # Connect apache and postgresql (perhaps not required).
+sudo apt-get install -y ruby  # Required for gem.
+sudo apt-get install -y git  # Be able to download extra repositories.
 ```
 <br></br>
 Clone Repo

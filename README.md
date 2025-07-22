@@ -29,37 +29,77 @@ CivLink uses a copy of [petitions](https://github.com/WhiteHouse/petitions),
 a GNU General Public License project that lets users create and sign petitions.
 
 ## Installation
+### FixMyStreet (https://fixmystreet.org/install/manual-install)
 Update hosts
 ```
 sudo apt update && sudo apt install -y git
 ```
-Install Git
+<br></br>
+Install Git & Curl
 ```
 apt install -y git
 apt install -y curl
 ```
+<br></br>
 Clone Repo
 ```
 git clone --recursive https://github.com/jkinlan/NCI_Project_CivLink.git
 ```
+<br></br>
 Change directory to fixmyscreet
 ```
 cd NCI_Project_CivLink/fixmystreet
 ```
-Install required packages for FixMyStreet
+<br></br>
+Install prerequisite packages
 ```
 sudo bin/install_packages
 ```
-Create PostgreSQL database and user
+<br></br>
+Create a new PostgreSQL database
 ```
 sudo -u postgres psql <<EOF
 CREATE USER fms WITH PASSWORD 'somepassword';
+CREATE ROLE
 CREATE DATABASE fms WITH OWNER fms;
+CREATE DATABASE
 \c fms
 CREATE LANGUAGE plpgsql;
+\q
 EOF
 ```
-Install Perl modules & setup
+<br></br>
+Install required dependencies, and other setup
 ```
 script/setup
+```
+<br></br>
+Set up config
+```
+cp conf/general.yml-example conf/general.yml
+nano conf/general.yml
+```
+Set configuration as below:
+
+FMS_DB_PASS: 'somepassword'
+
+BASE_URL: e.g. http://localhost:3000/
+
+MAPIT_URL: e.g. http://localhost:3000/fakemapit/
+
+<br></br>
+Configure application
+```
+cp conf/general.yml-example conf/general.yml
+nano conf/general.yml
+```
+<br></br>
+Load initial report data - not working?
+```
+bin/update-all-reports
+```
+<br></br>
+Run
+```
+script/server
 ```

@@ -35,10 +35,11 @@ Update hosts
 sudo apt update && sudo apt install -y git
 ```
 <br></br>
-Install Git & Curl
+Install Git, Curl, and Cpanm
 ```
 apt install -y git
 apt install -y curl
+apt install -y cpanminus
 ```
 <br></br>
 Clone Repo
@@ -60,9 +61,7 @@ Create a new PostgreSQL database
 ```
 sudo -u postgres psql <<EOF
 CREATE USER fms WITH PASSWORD 'somepassword';
-CREATE ROLE
 CREATE DATABASE fms WITH OWNER fms;
-CREATE DATABASE
 \c fms
 CREATE LANGUAGE plpgsql;
 \q
@@ -74,6 +73,11 @@ Install required dependencies, and other setup
 script/setup
 ```
 <br></br>
+Install "Image::PNG::QECode" that failed during install above.
+```
+cpanm Image::PNG::QRCode
+```
+<br></br>
 Set up config
 ```
 cp conf/general.yml-example conf/general.yml
@@ -83,18 +87,16 @@ Set configuration as below:
 
 FMS_DB_PASS: 'somepassword'
 
-BASE_URL: e.g. http://localhost:3000/
+BASE_URL: 'http://localhost:3000'
 
-MAPIT_URL: e.g. http://localhost:3000/fakemapit/
+MAPIT_URL: e.g. 'http://localhost:3000/fakemapit/'
 
-<br></br>
-Configure application
-```
-cp conf/general.yml-example conf/general.yml
-nano conf/general.yml
-```
 <br></br>
 Load initial report data - not working?
+
+eval $(perl -Ilocal/lib/perl5 -Mlocal::lib)
+perl -MFixMyStreet::Schema -e 'FixMyStreet::Schema->connect("dbi:Pg:dbname=fms", "fms", "somepassword")->deploy'
+
 ```
 bin/update-all-reports
 ```

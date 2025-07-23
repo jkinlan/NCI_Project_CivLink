@@ -75,6 +75,7 @@ script/setup
 Issue where Image::PNG::QRCode not installing
 Run:
 ```
+rm cpanfile.snapshot
 carton install
 ```
 <br></br>

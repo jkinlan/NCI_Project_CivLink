@@ -52,6 +52,8 @@ apt-get install -y postgresql-server-dev-all
 apt-get install -y libpq-dev 
 apt-get install -y cpanminus
 apt-get install -y carton
+apt-get install -y postgresql-16-postgis-3
+
 ```
 <br></br>
 Clone Repo

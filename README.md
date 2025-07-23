@@ -51,6 +51,7 @@ apt-get install -y postgresql-contrib
 apt-get install -y postgresql-server-dev-all 
 apt-get install -y libpq-dev 
 apt-get install -y cpanminus
+apt-get install -y carton
 ```
 <br></br>
 Clone Repo
@@ -74,14 +75,16 @@ sudo -u postgres psql <<EOF
 CREATE USER fms WITH PASSWORD 'somepassword';
 CREATE DATABASE fms WITH OWNER fms;
 \c fms
+CREATE EXTENSION postgis;
 CREATE LANGUAGE plpgsql;
 \q
 EOF
 ```
 <br></br>
-Install required dependencies, and other setup
+Clean Carton environment (avoid issue with installing Image::PNG::QRCode)
 ```
-script/setup
+rm -rf local/ cpanfile.snapshot
+carton install
 ```
 <br></br>
 Set up config
@@ -98,11 +101,7 @@ BASE_URL: 'http://localhost:3000'
 MAPIT_URL: e.g. 'http://localhost:3000/fakemapit/'
 
 <br></br>
-Load initial report data - not working?
-
-eval $(perl -Ilocal/lib/perl5 -Mlocal::lib)
-perl -MFixMyStreet::Schema -e 'FixMyStreet::Schema->connect("dbi:Pg:dbname=fms", "fms", "somepassword")->deploy'
-
+Load initial report data
 ```
 bin/update-all-reports
 ```

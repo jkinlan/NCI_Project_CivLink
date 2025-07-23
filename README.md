@@ -178,8 +178,11 @@ cp conf/general.yml-example conf/general.yml
 Set configuration as below:
 
 FMS_DB_PASS: 'somepassword'
+
 BASE_URL: 'http://localhost:3000'
+
 MAPIT_URL: e.g. 'http://localhost:3000/fakemapit/'
+
 <br></br>
 
 6. Set up some required data

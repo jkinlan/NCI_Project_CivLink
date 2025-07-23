@@ -121,6 +121,14 @@ script/server
 ```
 <br></br>
 
+Set the locale to Ireland.
+```
+sudo locale-gen en_IE.UTF-8
+sudo update-locale LANG=en_IE.UTF-8
+export LANG=en_IE.UTF-8
+export LC_ALL=en_IE.UTF-8
+```
+
 ---
 ---
 ---

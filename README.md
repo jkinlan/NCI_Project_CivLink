@@ -43,12 +43,10 @@ sudo apt install -y carton
 ```
 <br></br>
 
-1. Get the code
+1. Get the code (Changed to project repo rather than FixMyStreet)
 ```
-mkdir FixMyStreet
-cd FixMyStreet
-git clone --recursive https://github.com/mysociety/fixmystreet.git
-cd fixmystreet
+git clone --recursive https://github.com/jkinlan/NCI_Project_CivLink.git
+cd NCI_Project_CivLink/fixmystreet
 ```
 <br></br>
 

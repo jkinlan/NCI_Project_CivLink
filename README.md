@@ -108,6 +108,10 @@ script/setup
 ```
 bin/update-all-reports
 ```
+Create Superuser
+```
+bin/createsuperuser jkinlan@kravemedia.ie P@55w0rd
+```
 <br></br>
 
 7. Run

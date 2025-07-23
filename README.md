@@ -83,11 +83,16 @@ CREATE LANGUAGE plpgsql;
 EOF
 ```
 <br></br>
-Grant all permissions on DB to fms user
+Grant all permissions on DB to fms user???
 ```
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE fms TO fms;"
 sudo -u postgres psql -d fms -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO fms;"
 sudo -u postgres psql -d fms -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO fms;"
+```
+<br></br>
+Install required dependencies, and other setup
+```
+script/setup
 ```
 <br></br>
 Clean Carton environment (avoid issue with installing Image::PNG::QRCode)

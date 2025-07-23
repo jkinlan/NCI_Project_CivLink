@@ -124,3 +124,72 @@ Run
 ```
 script/server
 ```
+
+...
+---
+...
+
+alternative steps
+
+Update hosts
+```
+sudo apt update && sudo apt install -y git
+```
+<br></br>
+
+1. Get the code
+```
+mkdir FixMyStreet
+cd FixMyStreet
+git clone --recursive https://github.com/mysociety/fixmystreet.git
+cd fixmystreet
+```
+<br></br>
+
+2. Install prerequisite packages
+```
+sudo bin/install_packages
+```
+<br></br>
+
+3. Create a new PostgreSQL database
+```
+sudo -u postgres psql
+postgres=# CREATE USER fms WITH PASSWORD 'somepassword';
+CREATE ROLE
+postgres=# CREATE DATABASE fms WITH OWNER fms;
+CREATE DATABASE
+postgres=# \c fms
+postgres=# CREATE LANGUAGE plpgsql;
+postgres=# \q
+```
+<br></br>
+
+4. Install required dependencies, and other setup
+```
+script/setup
+```
+<br></br>
+
+5. Set up config
+```
+cp conf/general.yml-example conf/general.yml
+```
+Set configuration as below:
+
+FMS_DB_PASS: 'somepassword'
+BASE_URL: 'http://localhost:3000'
+MAPIT_URL: e.g. 'http://localhost:3000/fakemapit/'
+<br></br>
+
+6. Set up some required data
+```
+bin/update-all-reports
+```
+<br></br>
+
+7. Run
+```
+script/server
+```
+<br></br>

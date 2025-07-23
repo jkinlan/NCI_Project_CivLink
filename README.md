@@ -93,6 +93,8 @@ FMS_DB_PASS: 'somepassword'
 
 BASE_URL: 'http://localhost:3000'
 
+STAGING_SITE: 0
+
 MAPIT_URL: e.g. 'http://localhost:3000/fakemapit/'
 
 <br></br>

@@ -30,110 +30,16 @@ a GNU General Public License project that lets users create and sign petitions.
 
 ## Installation
 ### FixMyStreet (https://fixmystreet.org/install/manual-install)
-Update hosts
-```
-sudo apt update && sudo apt install -y git
-```
-<br></br>
-
-Install Dependencies
-```
-apt-get install -y git 
-apt-get install -y curl 
-apt-get install -y build-essential 
-apt-get install -y libexpat1-dev 
-apt-get install -y libgmp3-dev 
-apt-get install -y imagemagick 
-apt-get install -y libimage-magick-perl 
-apt-get install -y gettext 
-apt-get install -y postgresql 
-apt-get install -y postgresql-contrib 
-apt-get install -y postgresql-server-dev-all 
-apt-get install -y libpq-dev 
-apt-get install -y cpanminus
-apt-get install -y carton
-apt-get install -y postgresql-16-postgis-3
-
-```
-<br></br>
-Clone Repo
-```
-git clone --recursive https://github.com/jkinlan/NCI_Project_CivLink.git
-```
-<br></br>
-Change directory to fixmyscreet
-```
-cd NCI_Project_CivLink/fixmystreet
-```
-<br></br>
-Install prerequisite packages
-```
-sudo bin/install_packages
-```
-<br></br>
-Create a new PostgreSQL database
-```
-sudo -u postgres psql <<EOF
-CREATE USER fms WITH PASSWORD 'somepassword';
-CREATE DATABASE fms WITH OWNER fms;
-\c fms
-CREATE EXTENSION postgis;
-CREATE LANGUAGE plpgsql;
-\q
-EOF
-```
-<br></br>
-Grant all permissions on DB to fms user???
-```
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE fms TO fms;"
-sudo -u postgres psql -d fms -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO fms;"
-sudo -u postgres psql -d fms -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO fms;"
-```
-<br></br>
-Install required dependencies, and other setup
-```
-script/setup
-```
-<br></br>
-Clean Carton environment (avoid issue with installing Image::PNG::QRCode)
-```
-rm -rf local/ cpanfile.snapshot
-carton install
-```
-<br></br>
-Set up config
-```
-cp conf/general.yml-example conf/general.yml
-nano conf/general.yml
-```
-Set configuration as below:
-
-FMS_DB_PASS: 'somepassword'
-
-BASE_URL: 'http://localhost:3000'
-
-MAPIT_URL: e.g. 'http://localhost:3000/fakemapit/'
-
-<br></br>
-Load initial report data
-```
-bin/update-all-reports
-```
-<br></br>
-Run
-```
-script/server
-```
-
-...
----
-...
-
-alternative steps
 
 Update hosts
 ```
 sudo apt update && sudo apt install -y git
+```
+<br></br>
+
+Install Carton
+```
+sudo apt install -y carton
 ```
 <br></br>
 
@@ -154,14 +60,13 @@ sudo bin/install_packages
 
 3. Create a new PostgreSQL database
 ```
-sudo -u postgres psql
-postgres=# CREATE USER fms WITH PASSWORD 'somepassword';
-CREATE ROLE
-postgres=# CREATE DATABASE fms WITH OWNER fms;
-CREATE DATABASE
-postgres=# \c fms
-postgres=# CREATE LANGUAGE plpgsql;
-postgres=# \q
+sudo -u postgres psql <<EOF
+CREATE USER fms WITH PASSWORD 'somepassword';
+CREATE DATABASE fms WITH OWNER fms;
+\c fms
+CREATE LANGUAGE plpgsql;
+\q
+EOF
 ```
 <br></br>
 
@@ -169,11 +74,20 @@ postgres=# \q
 ```
 script/setup
 ```
+Issue where Image::PNG::QRCode not installing
+Run:
+```
+carton install
+```
 <br></br>
 
 5. Set up config
 ```
 cp conf/general.yml-example conf/general.yml
+```
+Modify config
+```
+nano conf/general.yml
 ```
 Set configuration as below:
 
@@ -183,6 +97,11 @@ BASE_URL: 'http://localhost:3000'
 
 MAPIT_URL: e.g. 'http://localhost:3000/fakemapit/'
 
+<br></br>
+Rerun setup to allow complete
+```
+script/setup
+```
 <br></br>
 
 6. Set up some required data
@@ -196,3 +115,20 @@ bin/update-all-reports
 script/server
 ```
 <br></br>
+
+---
+---
+---
+
+Possible additional step
+Add extention to SQL??
+```
+sudo -u postgres psql <<EOF
+CREATE USER fms WITH PASSWORD 'somepassword';
+CREATE DATABASE fms WITH OWNER fms;
+\c fms
+CREATE EXTENSION postgis;
+CREATE LANGUAGE plpgsql;
+\q
+EOF
+```

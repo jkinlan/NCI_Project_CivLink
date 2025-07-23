@@ -70,7 +70,7 @@ EOF
 
 4. Install required dependencies, and other setup
 ```
-script/setup
+sudo script/setup
 ```
 Issue where Image::PNG::QRCode not installing
 Run:

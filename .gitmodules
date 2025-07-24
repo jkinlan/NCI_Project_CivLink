@@ -1,3 +1,6 @@
 [submodule "fixmystreetfork"]
 	path = fixmystreet
 	url = https://github.com/jkinlan/fixmystreet.git
+
+## Update to latest changes in FixMyStreet fork.
+# 'git pull origin master'

@@ -130,11 +130,8 @@ export LC_ALL=en_IE.UTF-8
 ```
 
 ---
----
----
 
-## Installation
-### FixMyStreet (https://fixmystreet.org/install/manual-install)
+### WhiteHouse/petitions (https://github.com/WhiteHouse/petitions)
 
 Update hosts
 ```

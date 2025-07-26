@@ -35,7 +35,7 @@ Update hosts
 ```
 sudo apt update && sudo apt install -y git
 ```
-<br></br>
+</br>
 
 Install Carton
 ```

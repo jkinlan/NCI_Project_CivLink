@@ -41,20 +41,20 @@ Install Carton
 ```
 sudo apt install -y carton
 ```
-<br></br>
+</br>
 
 1. Get the code (Changed to project repo rather than FixMyStreet)
 ```
 git clone --recursive https://github.com/jkinlan/NCI_Project_CivLink.git
 cd NCI_Project_CivLink/fixmystreet
 ```
-<br></br>
+</br>
 
 2. Install prerequisite packages
 ```
 sudo bin/install_packages
 ```
-<br></br>
+</br>
 
 3. Create a new PostgreSQL database
 ```
@@ -66,7 +66,7 @@ CREATE LANGUAGE plpgsql;
 \q
 EOF
 ```
-<br></br>
+</br>
 
 4. Install required dependencies, and other setup
 ```
@@ -78,7 +78,7 @@ Run:
 rm cpanfile.snapshot
 carton install
 ```
-<br></br>
+</br>
 
 5. Set up config
 ```
@@ -98,12 +98,12 @@ STAGING_SITE: 0
 
 MAPIT_URL: e.g. 'http://localhost:3000/fakemapit/'
 
-<br></br>
+</br>
 Rerun setup to allow complete
 ```
 script/setup
 ```
-<br></br>
+</br>
 
 6. Set up some required data
 ```
@@ -113,13 +113,13 @@ Create Superuser
 ```
 bin/createsuperuser jkinlan@kravemedia.ie P@55w0rd
 ```
-<br></br>
+</br>
 
 7. Run
 ```
 script/server
 ```
-<br></br>
+</br>
 
 Set the locale to Ireland.
 ```
@@ -133,15 +133,17 @@ export LC_ALL=en_IE.UTF-8
 ---
 ---
 
-Possible additional step
-Add extention to SQL??
+## Installation
+### FixMyStreet (https://fixmystreet.org/install/manual-install)
+
+Update hosts
 ```
-sudo -u postgres psql <<EOF
-CREATE USER fms WITH PASSWORD 'somepassword';
-CREATE DATABASE fms WITH OWNER fms;
-\c fms
-CREATE EXTENSION postgis;
-CREATE LANGUAGE plpgsql;
-\q
-EOF
+sudo apt update && sudo apt install -y git
 ```
+</br>
+
+Install Carton
+```
+sudo apt install -y carton
+```
+</br>

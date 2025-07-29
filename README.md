@@ -39,7 +39,7 @@ sudo apt update && sudo apt upgrade
 
 Install Git & Carton
 ```
-sudo apt install -y carton && sudo apt install -y git
+sudo apt install -y carton git
 ```
 </br>
 

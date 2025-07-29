@@ -33,13 +33,13 @@ a MIT License project that lets users create and sign petitions.
 
 Update hosts
 ```
-sudo apt update && sudo apt install -y git
+sudo apt update && sudo apt upgrade
 ```
 </br>
 
-Install Carton
+Install Git & Carton
 ```
-sudo apt install -y carton
+sudo apt install -y carton && sudo apt install -y git
 ```
 </br>
 
@@ -139,8 +139,15 @@ export LC_ALL=en_IE.UTF-8
 
 Update hosts
 ```
-sudo apt update && sudo apt install -y git
+sudo apt update && sudo apt upgrade
 ```
+</br>
+
+Install Git
+```
+sudo apt install -y git
+```
+
 </br>
 Clone fork repo
 

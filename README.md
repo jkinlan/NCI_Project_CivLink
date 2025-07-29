@@ -141,6 +141,7 @@ sudo apt update && sudo apt install -y git
 ```
 </br>
 Install components
+
 ```
 sudo apt install -y apache2
 ```

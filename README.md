@@ -33,7 +33,7 @@ a MIT License project that lets users create and sign petitions.
 
 Update hosts
 ```
-sudo apt update && sudo apt upgrade
+sudo apt update && sudo apt upgrade -y
 ```
 </br>
 
@@ -139,7 +139,7 @@ export LC_ALL=en_IE.UTF-8
 
 Update hosts
 ```
-sudo apt update && sudo apt upgrade
+sudo apt update && sudo apt upgrade -y
 ```
 </br>
 

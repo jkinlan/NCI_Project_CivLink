@@ -99,11 +99,13 @@ STAGING_SITE: 0
 MAPIT_URL: e.g. 'http://localhost:3000/fakemapit/'
 
 </br>
+
 Rerun setup to allow complete
 ```
 script/setup
 ```
 </br>
+
 
 6) Set up some required data
 ```

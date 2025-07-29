@@ -143,9 +143,9 @@ sudo apt update && sudo apt upgrade
 ```
 </br>
 
-Install Git
+Install Git, Node, Ruby, 
 ```
-sudo apt install -y git
+sudo apt install -y git nodejs npm ruby 
 ```
 
 </br>

@@ -138,11 +138,27 @@ Update hosts
 sudo apt update && sudo apt install -y git
 ```
 </br>
+Install components
+```
+sudo apt install -y apache2
+```
+If more are needed, use this list.
+sudo apt install -y apache2 mysql-server php php-mysql libapache2-mod-php php-cli php-gd php-curl php-xml php-mbstring unzip
+sudo systemctl enable --now apache2 mysql
 
 1) Install Drush
+```
+sudo apt install -y composer
+composer global require drush/drush
+export PATH="$HOME/.composer/vendor/bin:$PATH"
+```
 
 2) Download Drupal 7.x
-
+```
+cd /var/www
+drush dl drupal-7 --drupal-project-rename=drupal
+cd drupal
+```
 3) Place this petitions directory inside Drupal's profiles directory.
 
 4) Use Drush make to download contrib projects like this:

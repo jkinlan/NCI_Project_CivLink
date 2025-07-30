@@ -141,47 +141,66 @@ sudo apt update && sudo apt upgrade -y
 ```
 </br>
 
+```
+sudo apt install -y git virtualenv python3-dev build-essential mariadb-server gettext libzip-dev libssl-dev
+```
+</br>
 
 ```
-sudo apt install git virtualenv python3-dev build-essential mariadb-server gettext libzip-dev libssl-dev
+sudo apt install -y libmariadb-dev-compat
 ```
-```
-sudo apt install libmariadb-dev-compat
-```
+</br>
+
 ```
 apt install -y python3-full
 apt install -y python3-pip
 apt install -y python3-django
 ```
+</br>
+
 ```
 curl -sSL https://pdm-project.org/install-pdm.py | python3 -
 ```
+</br>
+
 ```
 curl -sSLO https://pdm-project.org/install-pdm.py
 curl -sSL https://pdm-project.org/install-pdm.py.sha256 | shasum -a 256 -c -
 # Run the installer
 python3 install-pdm.py
 ```
+</br>
+
 ```
 pdm self update
 ```
+</br>
+
 ```
 version=$(curl -s https://api.github.com/repos/pytition/pytition/releases/latest | grep "tag_name" | cut -d : -f2,3 | tr -d \" | tr -d ,)
 ```
+</br>
+
 ```
 mkdir -p www/static www/mediaroot
 ```
+</br>
+
 ```
 cd www
 git clone https://github.com/pytition/pytition
 cd pytition
 git checkout $version
 ```
+</br>
+
 ```
 pdm self update
 pdm sync --clean
 eval $(pdm venv activate)
 ```
+</br>
+
 ```
 password="ENTER_A_SECURE_PASSWORD_YOU_WILL_REMEMBER_HERE"
 sudo mysql -h localhost -u root -Bse "CREATE USER pytition@localhost IDENTIFIED BY '${password}'; CREATE DATABASE pytition; GRANT USAGE ON *.* TO 'pytition'@localhost; GRANT ALL privileges ON pytition.* TO pytition@localhost; FLUSH PRIVILEGES;"
@@ -196,10 +215,14 @@ user = pytition
 password = YOUR_PASSWORD_HERE
 default-character-set = utf8
 ```
+</br>
+
 ```
 cd www/pytition
 cp pytition/pytition/settings/config_example.py pytition/pytition/settings/config.py
 ```
+</br>
+
 ```
 nano pytition/pytition/settings/config.py
 ```

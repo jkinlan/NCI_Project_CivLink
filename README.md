@@ -137,114 +137,138 @@ export LC_ALL=en_IE.UTF-8
 ### Pytition (https://pytition.readthedocs.io/en/latest/installation.html)
 Update hosts
 ```
-sudo apt update && sudo apt upgrade -y
+sudo apt update && sudo apt -y upgrade -y
 ```
 </br>
 
+1. System Preparation
+
+Install system-level dependencies including database, Python headers, and WSGI tools:
+
 ```
-sudo apt install -y git virtualenv python3-dev build-essential mariadb-server gettext libzip-dev libssl-dev
+sudo apt install -y python3-full python3-pip python3-dev python3-venv build-essential \
+                    libssl-dev libffi-dev libmysqlclient-dev mysql-server nginx \
+                    uwsgi uwsgi-plugin-python3 gettext
 ```
 </br>
 
+2. Clone the Pytition Repository
 ```
-sudo apt install -y libmariadb-dev-compat
-```
-</br>
-
-```
-apt install -y python3-full
-apt install -y python3-pip
-apt install -y python3-django
-apt install -y python3-pdm
+mkdir -p ~/www
+cd ~/www
+git clone https://github.com/pytition/pytition.git
 ```
 </br>
 
+3. Set Up a Python Virtual Environment
 ```
-sudo apt install -y curl
-```
-</br>
-
-```
-curl -sSL https://pdm-project.org/install-pdm.py | python3 -
+python3 -m venv ~/pytition_venv
+source ~/pytition_venv/bin/activate
 ```
 </br>
 
+4. Install Python Dependencies
 ```
-curl -sSLO https://pdm-project.org/install-pdm.py
-curl -sSL https://pdm-project.org/install-pdm.py.sha256 | shasum -a 256 -c -
-# Run the installer
-python3 install-pdm.py
-```
-</br>
-
-```
-pdm self update
+cd ~/www/pytition
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
 </br>
 
+5. Create MySQL Database and User
+Start MySQL:
 ```
-version=$(curl -s https://api.github.com/repos/pytition/pytition/releases/latest | grep "tag_name" | cut -d : -f2,3 | tr -d \" | tr -d ,)
-```
-</br>
-
-```
-mkdir -p www/static www/mediaroot
+sudo systemctl start mysql
+sudo systemctl enable mysql
 ```
 </br>
+Login to MySQL:
 
 ```
-cd www
-git clone https://github.com/pytition/pytition
-cd pytition
-git checkout $version
+sudo mysql
 ```
 </br>
+Inside MySQL shell:
 
 ```
-pdm self update
-pdm sync --clean
-eval $(pdm venv activate)
+CREATE DATABASE pytition_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'pytition_user'@'localhost' IDENTIFIED BY 'your_secure_password';
+GRANT ALL PRIVILEGES ON pytition_db.* TO 'pytition_user'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
 ```
 </br>
+6. Create MySQL Config File for Django
+Create a MySQL client config file for Django at:
 
 ```
-password="ENTER_A_SECURE_PASSWORD_YOU_WILL_REMEMBER_HERE"
-sudo mysql -h localhost -u root -Bse "CREATE USER pytition@localhost IDENTIFIED BY '${password}'; CREATE DATABASE pytition; GRANT USAGE ON *.* TO 'pytition'@localhost; GRANT ALL privileges ON pytition.* TO pytition@localhost; FLUSH PRIVILEGES;"
+nano /root/pytition_my.cnf
 ```
-</br>
-Write your SQL credential file in my.cnf outside of www:
-
+Add:
 ```
 [client]
-database = pytition
-user = pytition
-password = YOUR_PASSWORD_HERE
-default-character-set = utf8
+database = pytition_db
+user = pytition_user
+password = your_secure_password
+host = localhost
 ```
 </br>
 
+This file should only be readable by root. Check with:
 ```
-cd www/pytition
-cp pytition/pytition/settings/config_example.py pytition/pytition/settings/config.py
+chmod 600 /root/pytition_my.cnf
+```
+</br>
+7. Configure Django to Use MySQL
+Edit:
+
+```
+nano ~/www/pytition/pytition/pytition/settings/config.py
 ```
 </br>
 
+Find the DATABASES section and update it:
+
 ```
-nano pytition/pytition/settings/config.py
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'OPTIONS': {
+            'read_default_file': '/root/pytition_my.cnf',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+    }
+}
 ```
-Set:
-SECRET_KEY = 'YV&(876(*&^g(*T9&^F97GFYUJgKjgkjguy&*G'
-STATIC_URL = '/static/'
-STATIC_ROOT = '/home/pytition/www/static'
-MEDIA_URL = '/mediaroot/'
-MEDIA_ROOT = ''
-DATABASES = {}
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '[::1]']
+
+Replace ~ with /root — Django does not expand ~.
+</br>
+
+8. Set Django Environment Variable
+In your shell (or in ~/.bashrc):
 ```
-cd pytition
 export DJANGO_SETTINGS_MODULE="pytition.settings.config"
+```
+<br>
+
+9. Run Migrations and Collect Static Files
+Make sure you're in the Django project root (manage.py is here):
+```
+cd ~/www/pytition/pytition
+```
+</br>
+
+Run:
+```
 python3 manage.py migrate
-python3 manage.py collectstatic
+python3 manage.py collectstatic --noinput
 python3 manage.py compilemessages
 python3 manage.py createsuperuser
 ```
+</br>
+
+10. Test the Development Server (Optional)
+```
+python3 manage.py runserver 0.0.0.0:8000
+```
+</br>

@@ -134,7 +134,6 @@ export LC_ALL=en_IE.UTF-8
 ---
 </br>
 
-## Installation
 ### Pytition (https://pytition.readthedocs.io/en/latest/installation.html)
 
 ```

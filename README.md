@@ -155,6 +155,12 @@ sudo apt install -y libmariadb-dev-compat
 apt install -y python3-full
 apt install -y python3-pip
 apt install -y python3-django
+apt install -y python3-pdm
+```
+</br>
+
+```
+sudo apt install -y curl
 ```
 </br>
 

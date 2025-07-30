@@ -135,34 +135,9 @@ export LC_ALL=en_IE.UTF-8
 </br>
 
 ## Installation
-### e-petitions (https://github.com/alphagov/e-petitions/blob/master/README.md)
-
-Update hosts
-```
-sudo apt update && sudo apt upgrade -y
-```
-</br>
-
-Install Git, Node, Ruby, 
-```
-sudo apt install -y git nodejs npm ruby 
-```
-
-</br>
-Clone fork repo
+### Pytition (https://pytition.readthedocs.io/en/latest/installation.html)
 
 ```
-git clone --recursive https://github.com/jkinlan/e-petitions.git
-cd e-petitions
-```
----
----
----
-
-Pytition (https://pytition.readthedocs.io/en/latest/installation.html)
-
-```
-sudo apt update && sudo apt upgrade -y
 sudo apt install git virtualenv python3-dev build-essential mariadb-server gettext libzip-dev libssl-dev
 ```
 ```

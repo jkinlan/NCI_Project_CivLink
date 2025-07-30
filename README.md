@@ -169,8 +169,9 @@ sudo apt install git virtualenv python3-dev build-essential mariadb-server gette
 sudo apt install libmariadb-dev-compat
 ```
 ```
-apt install python3-full
-apt install python3-pip
+apt install -y python3-full
+apt install -y python3-pip
+apt install -y python3-django
 ```
 ```
 curl -sSL https://pdm-project.org/install-pdm.py | python3 -
@@ -230,3 +231,11 @@ MEDIA_URL = '/mediaroot/'
 MEDIA_ROOT = ''
 DATABASES = {}
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '[::1]']
+```
+cd pytition
+export DJANGO_SETTINGS_MODULE="pytition.settings.config"
+python3 manage.py migrate
+python3 manage.py collectstatic
+python3 manage.py compilemessages
+python3 manage.py createsuperuser
+```

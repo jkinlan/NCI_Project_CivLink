@@ -135,6 +135,12 @@ export LC_ALL=en_IE.UTF-8
 </br>
 
 ### Pytition (https://pytition.readthedocs.io/en/latest/installation.html)
+Update hosts
+```
+sudo apt update && sudo apt upgrade -y
+```
+</br>
+
 
 ```
 sudo apt install git virtualenv python3-dev build-essential mariadb-server gettext libzip-dev libssl-dev

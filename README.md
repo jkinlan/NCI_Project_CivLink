@@ -155,3 +155,78 @@ Clone fork repo
 git clone --recursive https://github.com/jkinlan/e-petitions.git
 cd e-petitions
 ```
+---
+---
+---
+
+Pytition (https://pytition.readthedocs.io/en/latest/installation.html)
+
+```
+sudo apt update && sudo apt upgrade -y
+sudo apt install git virtualenv python3-dev build-essential mariadb-server gettext libzip-dev libssl-dev
+```
+```
+sudo apt install libmariadb-dev-compat
+```
+```
+apt install python3-full
+apt install python3-pip
+```
+```
+curl -sSL https://pdm-project.org/install-pdm.py | python3 -
+```
+```
+curl -sSLO https://pdm-project.org/install-pdm.py
+curl -sSL https://pdm-project.org/install-pdm.py.sha256 | shasum -a 256 -c -
+# Run the installer
+python3 install-pdm.py
+```
+```
+pdm self update
+```
+```
+version=$(curl -s https://api.github.com/repos/pytition/pytition/releases/latest | grep "tag_name" | cut -d : -f2,3 | tr -d \" | tr -d ,)
+```
+```
+mkdir -p www/static www/mediaroot
+```
+```
+cd www
+git clone https://github.com/pytition/pytition
+cd pytition
+git checkout $version
+```
+```
+pdm self update
+pdm sync --clean
+eval $(pdm venv activate)
+```
+```
+password="ENTER_A_SECURE_PASSWORD_YOU_WILL_REMEMBER_HERE"
+sudo mysql -h localhost -u root -Bse "CREATE USER pytition@localhost IDENTIFIED BY '${password}'; CREATE DATABASE pytition; GRANT USAGE ON *.* TO 'pytition'@localhost; GRANT ALL privileges ON pytition.* TO pytition@localhost; FLUSH PRIVILEGES;"
+```
+</br>
+Write your SQL credential file in my.cnf outside of www:
+
+```
+[client]
+database = pytition
+user = pytition
+password = YOUR_PASSWORD_HERE
+default-character-set = utf8
+```
+```
+cd www/pytition
+cp pytition/pytition/settings/config_example.py pytition/pytition/settings/config.py
+```
+```
+nano pytition/pytition/settings/config.py
+```
+Set:
+SECRET_KEY = 'YV&(876(*&^g(*T9&^F97GFYUJgKjgkjguy&*G'
+STATIC_URL = '/static/'
+STATIC_ROOT = '/home/pytition/www/static'
+MEDIA_URL = '/mediaroot/'
+MEDIA_ROOT = ''
+DATABASES = {}
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '[::1]']

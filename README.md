@@ -220,7 +220,8 @@ chmod 600 pytition_my.cnf
 Edit:
 
 ```
-nano ~/www/pytition/pytition/pytition/settings/config.py
+cp pytition/pytition/settings/config_example.py pytition/pytition/settings/config.py
+nano pytition/pytition/settings/config.py
 ```
 </br>
 
@@ -238,6 +239,8 @@ DATABASES = {
 }
 ```
 
+Also set secret key.
+
 Replace ~ with /root — Django does not expand ~.
 </br>
 
@@ -251,7 +254,7 @@ export DJANGO_SETTINGS_MODULE="pytition.settings.config"
 9. Run Migrations and Collect Static Files
 Make sure you're in the Django project root (manage.py is here):
 ```
-cd ~/www/pytition/pytition
+cd pytition
 ```
 </br>
 

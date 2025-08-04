@@ -152,11 +152,9 @@ sudo apt install -y python3-full python3-pip python3-dev python3-venv build-esse
 ```
 </br>
 
-2. Clone the Pytition Repository
+2. Change Directory to Pytition Repository
 ```
-mkdir -p ~/www
-cd ~/www
-git clone https://github.com/pytition/pytition.git
+cd NCI_Project_CivLink/fixmystreet
 ```
 </br>
 
@@ -169,7 +167,6 @@ source ~/pytition_venv/bin/activate
 
 4. Install Python Dependencies
 ```
-cd ~/www/pytition
 pip install --upgrade pip
 pip install -r requirements.txt
 ```

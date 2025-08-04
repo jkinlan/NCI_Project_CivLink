@@ -25,8 +25,8 @@ petition crosses a certain threshold, the petition becomes "public" and is liste
 as an open petition on the site's "open petitions" page.
 
 ####
-CivLink uses a copy of [e-petitions](https://github.com/alphagov/e-petitions), 
-a MIT License project that lets users create and sign petitions.
+CivLink uses a copy of [Pytition](https://github.com/pytition/Pytition), 
+a project for self-hosted privacy-friendly online petitions.
 
 ## Installation
 ### FixMyStreet (https://fixmystreet.org/install/manual-install)

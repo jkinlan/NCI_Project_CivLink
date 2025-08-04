@@ -25,8 +25,8 @@ petition crosses a certain threshold, the petition becomes "public" and is liste
 as an open petition on the site's "open petitions" page.
 
 ####
-CivLink uses a copy of [e-petitions](https://github.com/alphagov/e-petitions), 
-a MIT License project that lets users create and sign petitions.
+CivLink uses a copy of [Pytition](https://github.com/pytition/Pytition), 
+a project for self-hosted privacy-friendly online petitions.
 
 ## Installation
 ### FixMyStreet (https://fixmystreet.org/install/manual-install)
@@ -39,7 +39,7 @@ sudo apt update && sudo apt upgrade -y
 
 Install Git & Carton
 ```
-sudo apt install -y carton git
+sudo apt install -y carton git libplack-perl
 ```
 </br>
 
@@ -119,7 +119,7 @@ bin/createsuperuser jkinlan@kravemedia.ie P@55w0rd
 
 7) Run
 ```
-script/server
+plackup -E production -s FCGI --listen 127.0.0.1 script/fixmystreet_app_server.pl
 ```
 </br>
 
@@ -152,11 +152,9 @@ sudo apt install -y python3-full python3-pip python3-dev python3-venv build-esse
 ```
 </br>
 
-2. Clone the Pytition Repository
+2. Change Directory to Pytition Repository
 ```
-mkdir -p ~/www
-cd ~/www
-git clone https://github.com/pytition/pytition.git
+cd NCI_Project_CivLink/fixmystreet
 ```
 </br>
 
@@ -169,7 +167,6 @@ source ~/pytition_venv/bin/activate
 
 4. Install Python Dependencies
 ```
-cd ~/www/pytition
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
@@ -202,7 +199,7 @@ EXIT;
 Create a MySQL client config file for Django at:
 
 ```
-nano /root/pytition_my.cnf
+nano pytition_my.cnf
 ```
 Add:
 ```
@@ -216,14 +213,15 @@ host = localhost
 
 This file should only be readable by root. Check with:
 ```
-chmod 600 /root/pytition_my.cnf
+chmod 600 pytition_my.cnf
 ```
 </br>
 7. Configure Django to Use MySQL
 Edit:
 
 ```
-nano ~/www/pytition/pytition/pytition/settings/config.py
+cp pytition/pytition/settings/config_example.py pytition/pytition/settings/config.py
+nano pytition/pytition/settings/config.py
 ```
 </br>
 
@@ -241,6 +239,8 @@ DATABASES = {
 }
 ```
 
+Also set secret key.
+
 Replace ~ with /root — Django does not expand ~.
 </br>
 
@@ -254,7 +254,7 @@ export DJANGO_SETTINGS_MODULE="pytition.settings.config"
 9. Run Migrations and Collect Static Files
 Make sure you're in the Django project root (manage.py is here):
 ```
-cd ~/www/pytition/pytition
+cd pytition
 ```
 </br>
 

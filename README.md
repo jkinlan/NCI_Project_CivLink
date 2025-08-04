@@ -119,7 +119,7 @@ bin/createsuperuser jkinlan@kravemedia.ie P@55w0rd
 
 7) Run
 ```
-plackup -E production -s FCGI --listen 127.0.0.1:9000 script/fixmystreet_app_server.pl
+plackup -E production -s FCGI --listen 127.0.0.1 script/fixmystreet_app_server.pl
 ```
 </br>
 

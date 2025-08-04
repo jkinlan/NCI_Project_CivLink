@@ -39,7 +39,7 @@ sudo apt update && sudo apt upgrade -y
 
 Install Git & Carton
 ```
-sudo apt install -y carton git
+sudo apt install -y carton git libplack-perl
 ```
 </br>
 

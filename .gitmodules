@@ -4,3 +4,6 @@
 
 ## Update to latest changes in FixMyStreet fork.
 # 'git pull origin master'
+[submodule "pytition"]
+	path = pytition
+	url = https://github.com/jkinlan/Pytition.git

@@ -199,7 +199,7 @@ EXIT;
 Create a MySQL client config file for Django at:
 
 ```
-nano /root/pytition_my.cnf
+nano pytition_my.cnf
 ```
 Add:
 ```
@@ -213,7 +213,7 @@ host = localhost
 
 This file should only be readable by root. Check with:
 ```
-chmod 600 /root/pytition_my.cnf
+chmod 600 pytition_my.cnf
 ```
 </br>
 7. Configure Django to Use MySQL

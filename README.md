@@ -39,7 +39,7 @@ sudo apt update && sudo apt upgrade -y
 
 Install Nginx
 ```
-sudo apt install nginx
+sudo apt install -y nginx
 ```
 
 Create Nginx cofig for Landing Page

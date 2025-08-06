@@ -4,5 +4,4 @@ fixmystreet/
 pytition/*
 pytition/
 
-data/*
-data/
+data/all-reports-dashboard.json

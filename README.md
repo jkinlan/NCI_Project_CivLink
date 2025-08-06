@@ -58,7 +58,7 @@ server {
 ```
 Enable site
 ```
-sudo ln -s /etc/nginx/sites-available/pytition /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/landing /etc/nginx/sites-enabled/
 ```
 (temp) Create HTML file for landing page (replace with Repo path to landing page site)
 ```

@@ -1,12 +1,8 @@
 fixmystreet/*
-pytition/*
-/fixmystreet/*
-/pytition/*
 fixmystreet/
+
+pytition/*
 pytition/
-/fixmystreet/
-/pytition/
-/fixmystreet
-/pytition
-fixmystreet
-pytition
+
+data/*
+data/

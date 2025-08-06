@@ -44,7 +44,7 @@ sudo apt install -y nginx
 
 Create Nginx cofig for Landing Page
 ```
-sudo nano /etc/nginx/sites-available/landing
+sudo nano /etc/nginx/sites-available/civlink.kravemedia.ie
 ```
 Enter into file
 ```
@@ -58,17 +58,17 @@ server {
 ```
 Enable site
 ```
-sudo ln -s /etc/nginx/sites-available/landing /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/civlink.kravemedia.ie /etc/nginx/sites-enabled/
 ```
 (temp) Create HTML file for landing page (replace with Repo path to landing page site)
 ```
 sudo mkdir -p /home/ubuntu/NCI_Project_CivLink/civlink
-echo "<h1>Welcome to CivLink</h1>" | sudo tee /var/www/civlink.kravemedia.ie/index.html
+echo "<h1>Welcome to CivLink</h1>" | sudo tee /home/ubuntu/NCI_Project_CivLink/civlink/index.html
 ```
 
 Create Nginx config file for Petition site
 ```
-sudo nano /etc/nginx/sites-available/pytition
+sudo nano /etc/nginx/sites-available/petitions.civlink.kravemedia.ie
 ```
 Enter into file
 ```
@@ -85,12 +85,12 @@ server {
 ```
 Enable site
 ```
-sudo ln -s /etc/nginx/sites-available/pytition /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/petitions.civlink.kravemedia.ie /etc/nginx/sites-enabled/
 ```
 
 Create Nginc config file for FixMyStreet
 ```
-sudo nano /etc/nginx/sites-available/fixmystreet
+sudo nano /etc/nginx/sites-available/fixmystreet.civlink.kravemedia.ie
 ```
 Enter into file
 ```
@@ -107,7 +107,7 @@ server {
 ```
 Enable site
 ```
-sudo ln -s /etc/nginx/sites-available/fixmystreet /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/fixmystreet.civlink.kravemedia.ie /etc/nginx/sites-enabled/
 ```
 ---
 

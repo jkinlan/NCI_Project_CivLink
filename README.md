@@ -208,20 +208,22 @@ Create Superuser
 bin/createsuperuser jkinlan@kravemedia.ie P@55w0rd
 ```
 </br>
+7) Set the locale to Ireland.
 
-7) Run
-```
-plackup -E production -s FCGI --listen 127.0.0.1 script/fixmystreet_app_server.pl
-```
-</br>
-
-Set the locale to Ireland.
 ```
 sudo locale-gen en_IE.UTF-8
 sudo update-locale LANG=en_IE.UTF-8
 export LANG=en_IE.UTF-8
 export LC_ALL=en_IE.UTF-8
 ```
+
+8) Run
+```
+plackup -E production -s FCGI --listen 127.0.0.1 script/fixmystreet_app_server.pl
+```
+</br>
+
+
 
 ---
 </br>

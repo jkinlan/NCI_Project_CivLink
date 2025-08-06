@@ -219,7 +219,7 @@ export LC_ALL=en_IE.UTF-8
 
 8) Run
 ```
-plackup -E production -s FCGI --listen 127.0.0.1 script/fixmystreet_app_server.pl
+nohup plackup -E production -s FCGI --listen 127.0.0.1 script/fixmystreet_app_server.pl > plack.log 2>&1 &
 ```
 </br>
 

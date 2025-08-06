@@ -52,7 +52,7 @@ server {
     listen 80;
     server_name civlink.kravemedia.ie;
 
-    root /var/www/civlink.kravemedia.ie;
+    root /home/ubuntu/NCI_Project_CivLink/civlink;
     index index.html;
 }
 ```
@@ -62,7 +62,7 @@ sudo ln -s /etc/nginx/sites-available/pytition /etc/nginx/sites-enabled/
 ```
 (temp) Create HTML file for landing page (replace with Repo path to landing page site)
 ```
-sudo mkdir -p /var/www/civlink.kravemedia.ie
+sudo mkdir -p /home/ubuntu/NCI_Project_CivLink/civlink
 echo "<h1>Welcome to CivLink</h1>" | sudo tee /var/www/civlink.kravemedia.ie/index.html
 ```
 

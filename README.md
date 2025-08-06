@@ -109,6 +109,7 @@ Enable site
 ```
 sudo ln -s /etc/nginx/sites-available/fixmystreet /etc/nginx/sites-enabled/
 ```
+---
 
 ### FixMyStreet (https://fixmystreet.org/install/manual-install)
 
@@ -235,7 +236,7 @@ sudo apt install -y python3-full python3-pip python3-dev python3-venv build-esse
 
 2. Change Directory to Pytition Repository
 ```
-cd NCI_Project_CivLink/fixmystreet
+cd NCI_Project_CivLink/pytition
 ```
 </br>
 

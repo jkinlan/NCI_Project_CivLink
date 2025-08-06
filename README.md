@@ -29,6 +29,88 @@ CivLink uses a copy of [Pytition](https://github.com/pytition/Pytition),
 a project for self-hosted privacy-friendly online petitions.
 
 ## Installation
+
+### Landing Page & Reverse Proxy in Nginx
+
+Update hosts
+```
+sudo apt update && sudo apt upgrade -y
+```
+
+Install Nginx
+```
+sudo apt install -y nginx
+```
+
+Create Nginx cofig for Landing Page
+```
+sudo nano /etc/nginx/sites-available/landing
+```
+Enter into file
+```
+server {
+    listen 80;
+    server_name civlink.kravemedia.ie;
+
+    root /var/www/civlink.kravemedia.ie;
+    index index.html;
+}
+```
+Enable site
+```
+sudo ln -s /etc/nginx/sites-available/pytition /etc/nginx/sites-enabled/
+```
+(temp) Create HTML file for landing page (replace with Repo path to landing page site)
+```
+sudo mkdir -p /var/www/civlink.kravemedia.ie
+echo "<h1>Welcome to CivLink</h1>" | sudo tee /var/www/civlink.kravemedia.ie/index.html
+```
+
+Create Nginx config file for Petition site
+```
+sudo nano /etc/nginx/sites-available/pytition
+```
+Enter into file
+```
+server {
+    listen 80;
+    server_name petitions.civlink.kravemedia.ie;
+
+    location / {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+Enable site
+```
+sudo ln -s /etc/nginx/sites-available/pytition /etc/nginx/sites-enabled/
+```
+
+Create Nginc config file for FixMyStreet
+```
+sudo nano /etc/nginx/sites-available/fixmystreet
+```
+Enter into file
+```
+server {
+    listen 80;
+    server_name fixmystreet.civlink.kravemedia.ie;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+Enable site
+```
+sudo ln -s /etc/nginx/sites-available/fixmystreet /etc/nginx/sites-enabled/
+```
+---
+
 ### FixMyStreet (https://fixmystreet.org/install/manual-install)
 
 Update hosts
@@ -154,7 +236,7 @@ sudo apt install -y python3-full python3-pip python3-dev python3-venv build-esse
 
 2. Change Directory to Pytition Repository
 ```
-cd NCI_Project_CivLink/fixmystreet
+cd NCI_Project_CivLink/pytition
 ```
 </br>
 

@@ -109,6 +109,16 @@ Enable site
 ```
 sudo ln -s /etc/nginx/sites-available/fixmystreet.civlink.kravemedia.ie /etc/nginx/sites-enabled/
 ```
+Update hosts file
+```
+/etc/hosts
+```
+Add
+```
+127.0.0.1 civlink.kravemedia.ie
+127.0.0.1 fixmystreet.civlink.kravemedia.ie
+127.0.0.1 petitions.civlink.kravemedia.ie
+```
 ---
 
 ### FixMyStreet (https://fixmystreet.org/install/manual-install)
